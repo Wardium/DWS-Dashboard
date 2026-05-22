@@ -14,7 +14,7 @@ app.config['SESSION_COOKIE_SECURE'] = True   # MUST be True (requires HTTPS/Clou
 # the browser requires SameSite='None' to allow setting the cookie.
 app.config['SESSION_COOKIE_SAMESITE'] = 'None' 
 
-SECRET_PASSWORD = "weqr1234"
+SECRET_PASSWORD = "dws131258513"
 GITHUB_PAGES_URL = "https://teamexist.com" 
 
 @app.after_request
