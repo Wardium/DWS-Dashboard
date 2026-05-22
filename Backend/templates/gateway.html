@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gateway</title>
+    <style>
+        /* Base Styling */
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000000;
+            color: #e0e0e0;
+            overflow: hidden; 
+            transition: background-color 0.5s ease;
+        }
+
+        #gateway-container {
+            text-align: center;
+            width: 350px;
+            padding: 40px;
+            background: transparent; 
+            position: relative;
+            z-index: 10;
+        }
+
+        /* --- NEW: Asynchronous Floating Wrappers --- */
+        /* By giving them different times and delays, they drift unevenly */
+        .float-item {
+			will-change: transform; 
+		}
+		.float-1 { animation: float-obj 4.3s ease-in-out infinite 0s; }    /* Logo: Fast */
+		.float-2 { animation: float-obj 7.1s ease-in-out infinite -3s; }   /* Input: Very slow */
+		.float-3 { animation: float-obj 5.7s ease-in-out infinite -1.5s; } /* Button: Medium */
+
+        @keyframes float-obj {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Element Styling */
+        #gateway-logo {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));
+        }
+
+        #pass-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            outline: none;
+            transition: all 0.3s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+
+        #pass-input:focus {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0,0,0,0.5);
+            transform: scale(1.02);
+        }
+
+        #pass-input.input-error {
+            border-color: #ff4444;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+            background-color: rgba(255, 68, 68, 0.05);
+        }
+
+        /* Buttons */
+        .gateway-btn {
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 25px;
+            display: none; 
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+        }
+
+        .gateway-btn.show {
+            display: inline-block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        #verify-btn {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            backdrop-filter: blur(5px);
+        }
+        #verify-btn:hover {
+            background-color: rgba(255,255,255,0.2);
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        #redirect-transition-btn {
+			visibility: hidden;
+            background-color: #28a745;
+            color: white;
+            position: absolute; 
+            top: 50%;
+            left: 50%;
+            margin-top: 0;
+            border: none;
+            box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+            z-index: 100;
+            animation: pulse-green 2s infinite;
+            margin-left: -70px; 
+            margin-top: -22px;  
+            transform: none !important;
+        }
+
+        /* Loading */
+        #loading-spinner {
+            display: none;
+            margin: 25px auto 0;
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite, glow-spin 2s alternate infinite;
+        }
+
+        /* --- UPGRADED: Glitch/Blocky Wave Overlay --- */
+        #animation-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 150vw; 
+            height: 150vh;
+            pointer-events: none; 
+            opacity: 0;
+            z-index: 5; 
+            transform-origin: center;
+        }
+
+        /* 
+           We layer the smooth circular wave under two harsh, blocky 
+           data-grid patterns. When they move asynchronously, it creates 
+           flashing digital blocks inside the wave. 
+        */
+        .red-wave { 
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255, 40, 40, 0.8) 0%, transparent 60%),
+                repeating-linear-gradient(90deg, transparent 0%, transparent 8%, rgba(255,0,0,0.4) 8.5%, transparent 9%, transparent 15%, rgba(255,80,80,0.2) 15.5%, transparent 16%),
+                repeating-linear-gradient(0deg, transparent 0%, transparent 12%, rgba(255,0,0,0.5) 12.5%, transparent 13%, transparent 22%, rgba(255,100,100,0.3) 22.5%, transparent 23%);
+            background-size: 100% 100%, 200% 200%, 200% 200%;
+            mix-blend-mode: screen; 
+        }
+
+        .green-wave { 
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(40, 255, 69, 0.8) 0%, transparent 60%),
+                repeating-linear-gradient(90deg, transparent 0%, transparent 8%, rgba(0,255,0,0.4) 8.5%, transparent 9%, transparent 15%, rgba(80,255,80,0.2) 15.5%, transparent 16%),
+                repeating-linear-gradient(0deg, transparent 0%, transparent 12%, rgba(0,255,0,0.5) 12.5%, transparent 13%, transparent 22%, rgba(100,255,100,0.3) 22.5%, transparent 23%);
+            background-size: 100% 100%, 200% 200%, 200% 200%;
+            mix-blend-mode: screen; 
+        }
+
+        .trigger-wave { 
+            /* We combine a smooth scale with a jagged step animation */
+            animation: 
+                wave-scale 1.2s cubic-bezier(0.1, 0.9, 0.2, 1) forwards,
+                wave-glitch-blocks 1.2s steps(8, end) forwards; 
+        }
+
+        /* Smoothly expands the primary wave */
+        @keyframes wave-scale {
+            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0.4; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
+        /* Jaggedly shifts the internal blocks and chops the edges of the wave */
+        @keyframes wave-glitch-blocks {
+            0%   { background-position: 0 0, 0 0, 0 0; clip-path: inset(0% 0% 0% 0%); }
+            10%  { background-position: 0 0, 50px 10px, -20px 80px; clip-path: inset(2% 0% 5% 0%); }
+            20%  { background-position: 0 0, -80px 40px, 50px -30px; clip-path: inset(0% 3% 0% 8%); }
+            30%  { background-position: 0 0, 120px -60px, -90px 20px; clip-path: inset(8% 0% 2% 0%); }
+            40%  { background-position: 0 0, -40px 90px, 110px -70px; clip-path: inset(0% 10% 0% 2%); }
+            50%  { background-position: 0 0, 70px -20px, -50px 100px; clip-path: inset(4% 0% 6% 0%); }
+            60%  { background-position: 0 0, -100px 50px, 80px -40px; clip-path: inset(0% 5% 0% 5%); }
+            70%  { background-position: 0 0, 30px -80px, -120px 60px; clip-path: inset(7% 0% 3% 0%); }
+            80%  { background-position: 0 0, -60px 110px, 40px -90px; clip-path: inset(0% 2% 0% 7%); }
+            90%  { background-position: 0 0, 90px -30px, -70px 50px; clip-path: inset(1% 0% 9% 0%); }
+            100% { background-position: 0 0, 0 0, 0 0; clip-path: inset(0% 0% 0% 0%); }
+        }
+
+        /* General Animations */
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.4); scale: 1; }
+            50% { box-shadow: 0 0 30px rgba(40, 167, 69, 0.8); scale: 1.05; }
+            100% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.4); scale: 1; }
+        }
+
+        @keyframes violent-shake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            20% { transform: translateX(-15px) rotate(-2deg); }
+            40% { transform: translateX(15px) rotate(2deg); }
+            60% { transform: translateX(-15px) rotate(-1deg); }
+            80% { transform: translateX(15px) rotate(1deg); }
+        }
+
+        @keyframes fall-off {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; filter: blur(0); }
+            100% { transform: translateY(100vh) rotate(15deg); opacity: 0; filter: blur(5px); }
+        }
+
+        @keyframes glitch-white {
+            0% { filter: invert(0%) contrast(100%); }
+            10% { filter: invert(100%) contrast(200%) hue-rotate(90deg); }
+            20% { filter: invert(0%) contrast(100%) blur(2px); }
+            30% { filter: invert(100%) contrast(300%) hue-rotate(-90deg); }
+            40% { filter: invert(0%) contrast(100%); }
+            100% { background-color: #ffffff; color: #000000; filter: none; }
+        }
+
+        @keyframes glow-spin {
+            0% { box-shadow: 0 0 5px rgba(255,255,255,0.2); }
+            100% { box-shadow: 0 0 15px rgba(255,255,255,0.8); }
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Animation Classes */
+        .shake { animation: violent-shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        .falling { animation: fall-off 1.2s forwards cubic-bezier(0.55, 0.085, 0.68, 0.53); }
+        .glitch-white-transition { animation: glitch-white 0.8s forwards; animation-delay: 0.5s; }
+
+        /* Lockout Text Screen */
+        .lockout-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .lockout-text {
+            color: #ff4444; 
+            text-align: center; 
+            font-size: 1.3rem; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            will-change: transform, opacity, filter;
+            animation: lockout-reveal 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards, float-obj 6s ease-in-out infinite 1.5s;
+        }
+
+        @keyframes lockout-reveal {
+            0% { opacity: 0; letter-spacing: -10px; filter: blur(10px); color: #fff; transform: translateY(30px); }
+            50% { opacity: 1; letter-spacing: 5px; filter: blur(0px); color: #ff8888; transform: translateY(0px); }
+            100% { opacity: 0.8; letter-spacing: 2px; color: #ff4444; transform: translateY(0px); text-shadow: 0 0 20px rgba(255,0,0,0.5); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="animation-overlay"></div>
+    <button id="redirect-transition-btn" class="gateway-btn">Proceeding...</button>
+
+    <div id="gateway-container">
+        
+        <!-- Logo floats independently (float-1) -->
+        <div class="float-item float-1">
+            <img src="/static/logo.png" alt="Gateway Logo" id="gateway-logo">
+        </div>
+
+        <div id="input-section">
+            <!-- Input floats independently (float-2) -->
+            <div class="float-item float-2">
+                <input type="password" id="pass-input" placeholder="Access Code..." oninput="toggleVerifyButton()">
+            </div>
+            
+            <!-- Button & Spinner float together (float-3) -->
+            <div class="float-item float-3">
+                <div id="loading-spinner"></div>
+                <button id="verify-btn" class="gateway-btn" onclick="checkPassword()">Verify</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const LOCKOUT_MINUTES = 10;
+    const MAX_ATTEMPTS = 3;
+    let storedRedirectUrl = ""; 
+
+    const container = document.getElementById('gateway-container');
+    const input = document.getElementById('pass-input');
+    const verifyBtn = document.getElementById('verify-btn');
+    const redirectBtn = document.getElementById('redirect-transition-btn');
+    const spinner = document.getElementById('loading-spinner');
+    const animationOverlay = document.getElementById('animation-overlay');
+
+    checkLockoutStatus();
+
+    function toggleVerifyButton() {
+        if (input.value.length > 0) {
+            verifyBtn.classList.add('show');
+        } else {
+            verifyBtn.classList.remove('show');
+        }
+    }
+
+    input.addEventListener("keypress", function(event) {
+        if (event.key === "Enter" && input.value.length > 0) {
+            event.preventDefault();
+            checkPassword();
+        }
+    });
+
+    async function checkPassword() {
+        const password = input.value;
+        const attemptsKey = 'gateway_attempts';
+        let attempts = parseInt(localStorage.getItem(attemptsKey) || 0);
+
+        input.classList.remove('input-error');
+        verifyBtn.classList.remove('show');
+        spinner.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                storedRedirectUrl = data.redirect_url;
+                localStorage.removeItem(attemptsKey); 
+                triggerSuccessSequence();
+            } else {
+                attempts++;
+                localStorage.setItem(attemptsKey, attempts);
+                input.value = ""; 
+                spinner.style.display = 'none';
+                
+                if (attempts >= MAX_ATTEMPTS) {
+                    triggerLockout();
+                } else {
+                    triggerFailureFeedback();
+                }
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            spinner.style.display = 'none';
+            verifyBtn.classList.add('show');
+        }
+    }
+
+    function triggerSuccessSequence() {
+        animationOverlay.className = ''; 
+        void animationOverlay.offsetWidth;
+        animationOverlay.classList.add('green-wave', 'trigger-wave');
+        
+        container.style.transition = 'opacity 0.5s ease';
+        container.style.opacity = '0';
+        document.body.classList.add('glitch-white-transition');
+
+        setTimeout(() => {
+            container.style.display = 'none'; 
+            redirectBtn.classList.add('show'); 
+        }, 800); 
+
+        setTimeout(() => {
+            if (storedRedirectUrl) {
+                window.top.location.href = storedRedirectUrl;
+            }
+        }, 2800); 
+    }
+
+    function triggerFailureFeedback() {
+        animationOverlay.className = ''; 
+        void animationOverlay.offsetWidth; 
+        animationOverlay.classList.add('red-wave', 'trigger-wave');
+
+        container.classList.add('shake');
+        input.classList.add('input-error');
+
+        setTimeout(() => {
+            container.classList.remove('shake');
+            verifyBtn.classList.add('show'); 
+            input.focus();
+        }, 1000); 
+    }
+
+    function triggerLockout() {
+        const lockoutUntil = new Date().getTime() + (LOCKOUT_MINUTES * 60 * 1000);
+        localStorage.setItem('gateway_lockout_until', lockoutUntil);
+
+        container.classList.add('falling');
+
+        setTimeout(() => {
+            container.style.display = 'none';
+            showLockoutScreen();
+        }, 1200); 
+    }
+
+    function checkLockoutStatus() {
+        const lockoutUntil = localStorage.getItem('gateway_lockout_until');
+        if (lockoutUntil) {
+            const now = new Date().getTime();
+            if (now < parseInt(lockoutUntil)) {
+                container.style.display = 'none';
+                showLockoutScreen();
+                return true;
+            } else {
+                localStorage.removeItem('gateway_lockout_until');
+                localStorage.removeItem('gateway_attempts');
+            }
+        }
+        return false;
+    }
+
+    function showLockoutScreen() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'lockout-container';
+
+        const msg = document.createElement('div');
+        msg.className = 'lockout-text';
+        msg.innerHTML = "System Locked<br><span style='font-size: 0.8rem; color: rgba(255,255,255,0.5);'>Connection Refused</span>";
+        
+        wrapper.appendChild(msg);
+        document.body.appendChild(wrapper);
+    }
+</script>
+
+</body>
+</html>
