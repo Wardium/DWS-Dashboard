@@ -36,7 +36,7 @@ def verify_password():
         
         # Notice we don't even need the crazy long URL anymore. 
         # A standard, clean URL is perfectly safe now.
-        return jsonify({"success": True, "redirect_url": "https://nextcloud.teamexist.com"})
+        return jsonify({"success": True, "redirect_url": "https://dashboard-rfdtq2xvdwq.teamexist.com"})
     else:
         return jsonify({"success": False}), 401
 
