@@ -26,7 +26,7 @@ DEFAULT_SITES = [
     {"name": "Steam", "url": "https://store.steampowered.com"},
     {"name": "The Onion", "url": "https://theonion.com"},
     {"name": "SignalMidi", "url": "https://signalmidi.app"},
-    {"name": "Coolors", "url": "https://coolors.co/gradient-maker/"}
+    {"name": "Coolors", "url": "https://coolors.co/gradient-maker"}
 ]
 
 APPLETS = [
