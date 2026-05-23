@@ -52,7 +52,7 @@ def capture_screenshot_bg(url, filepath):
             page = browser.new_page(viewport={"width": 1280, "height": 720})
             
             # Wait until network traffic stops, with a longer 20s timeout
-            page.goto(url, wait_until="networkidle", timeout=20000)
+            page.goto(url, wait_until="networkidle", timeout=50000)
             
             # Force Playwright to wait exactly 5000 milliseconds (5 seconds)
             page.wait_for_timeout(5000) 
