@@ -36,7 +36,7 @@ APPLETS = [
     {"name": "MeTube", "url": "https://metube-rfdtq2xvdwq.teamexist.com", "full_width": False},
     {"name": "Minecraft", "url": "https://minecraft-rfdtq2xvdwq.teamexist.com", "full_width": False},
     {"name": "PhotoPrism", "url": "https://photoprism-rfdtq2xvdwq.teamexist.com", "full_width": False},
-    {"name": "PiHole", "url": "https://pihole-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "PiHole", "url": "https://pihole-rfdtq2xvdwq.teamexist.com/admin/login", "full_width": False},
     {"name": "OctoPrint", "url": "https://octoprint-rfdtq2xvdwq.teamexist.com", "full_width": True},
     {"name": "Stremio", "url": "https://stremio-rfdtq2xvdwq.teamexist.com", "full_width": False},
     {"name": "Transfer", "url": "https://transfer-rfdtq2xvdwq.teamexist.com", "full_width": False},
