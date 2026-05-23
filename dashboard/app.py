@@ -25,22 +25,22 @@ DEFAULT_SITES = [
     {"name": "Google Gemini", "url": "https://gemini.google.com"},
     {"name": "Steam", "url": "https://store.steampowered.com"},
     {"name": "The Onion", "url": "https://theonion.com"},
-    {"name": "SignalMidi", "url": "https://signalmidi.com"},
-    {"name": "Coolors", "url": "https://coolors.co"}
+    {"name": "SignalMidi", "url": "https://signalmidi.app"},
+    {"name": "Coolors", "url": "https://coolors.co/gradient-maker/"}
 ]
 
 APPLETS = [
-    {"name": "Nextcloud", "url": "https://your-nextcloud-url.com", "full_width": True},
-    {"name": "Converter", "url": "https://your-converter-url.com", "full_width": False},
-    {"name": "Jellyfin", "url": "https://your-jellyfin-url.com", "full_width": False},
-    {"name": "MeTube", "url": "https://your-metube-url.com", "full_width": False},
-    {"name": "Minecraft", "url": "https://your-mc-url.com", "full_width": False},
-    {"name": "PhotoPrism", "url": "https://your-photoprism-url.com", "full_width": False},
-    {"name": "PiHole", "url": "https://your-pihole-url.com", "full_width": False},
-    {"name": "OctoPrint", "url": "https://your-octoprint-url.com", "full_width": False},
-    {"name": "Stremio", "url": "https://your-stremio-url.com", "full_width": False},
-    {"name": "Transfer", "url": "https://your-transfer-url.com", "full_width": False},
-    {"name": "WebInfinity", "url": "https://your-webinfinity-url.com", "full_width": False},
+    {"name": "Nextcloud", "url": "https://nextcloud.teamexist.com", "full_width": True},
+    {"name": "Converter", "url": "https://convert-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "Jellyfin", "url": "https://jellyfin-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "MeTube", "url": "https://metube-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "Minecraft", "url": "https://minecraft-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "PhotoPrism", "url": "https://photoprism-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "PiHole", "url": "https://pihole-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "OctoPrint", "url": "https://octoprint-rfdtq2xvdwq.teamexist.com", "full_width": True},
+    {"name": "Stremio", "url": "https://stremio-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "Transfer", "url": "https://transfer-rfdtq2xvdwq.teamexist.com", "full_width": False},
+    {"name": "WebInfinity", "url": "https://webinfinity.teamexist.com", "full_width": False},
     {"name": "HomePage", "url": "https://teamexist.com", "full_width": False}
 ]
 
