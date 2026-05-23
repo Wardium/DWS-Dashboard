@@ -74,7 +74,7 @@ def favicon():
 @app.route('/')
 def index():
     # Pick a random background from static/backgrounds safely
-    bgs = [f for f in os.listdir(BACKGROUNDS_DIR) if f.endswith('.png')]
+    bgs = [f for f in os.listdir(BACKGROUNDS_DIR) if f.endswith('.jpg')]
     bg_image = random.choice(bgs) if bgs else None
 
     return render_template('index.html', default_sites=DEFAULT_SITES, applets=APPLETS, bg_image=bg_image)
