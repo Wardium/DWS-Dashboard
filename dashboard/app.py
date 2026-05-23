@@ -85,7 +85,7 @@ def check_status():
     if not url:
         return jsonify({'online': False})
     try:
-        res = requests.get(url, timeout=3)
+        res = requests.get(url, timeout=20)
         return jsonify({'online': res.status_code < 400})
     except:
         return jsonify({'online': False})
