@@ -78,14 +78,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.applet-card').forEach(applet => {
         const url = applet.getAttribute('data-url');
+        
+        // 1. Immediately make it clickable so the warp works no matter what
+        applet.onclick = (e) => triggerWarp(e, url);
+
+        // 2. Still check the status just to apply the grayscale effect if it's down
         fetch(`/status?url=${encodeURIComponent(url)}`)
             .then(res => res.json())
             .then(data => {
                 if (!data.online) {
                     applet.classList.add('applet-offline');
-                    applet.onclick = () => console.log(`${url} is offline.`);
-                } else {
-                    applet.onclick = (e) => triggerWarp(e, url);
+                    // It stays clickable, just turns grey!
                 }
             })
             .catch(err => console.error(err));
