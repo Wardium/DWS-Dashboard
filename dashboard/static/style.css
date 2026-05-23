@@ -5,7 +5,7 @@
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
     --accent-blue: linear-gradient(90deg, hsla(197, 87%, 71%, 1) 0%, hsla(213, 86%, 53%, 1) 100%);
     --vignette: radial-gradient(circle, transparent 40%, rgba(0, 86, 179, 0.6) 120%);
-    --bg-base: linear-gradient(90deg, hsla(197, 87%, 71%, 1) 0%, hsla(213, 86%, 53%, 1) 100%);
+    --bg-base: #000000;
 }
 
 [data-theme="dark"] {
@@ -14,7 +14,7 @@
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     --vignette: linear-gradient(90deg, hsla(214, 51%, 54%, 1) 0%, hsla(243, 56%, 36%, 1) 100%);
-    --bg-base: linear-gradient(90deg, hsla(214, 51%, 54%, 1) 0%, hsla(243, 56%, 36%, 1) 100%);
+    --bg-base: #000000;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
@@ -42,6 +42,12 @@ body {
     position: fixed; inset: 0; z-index: -2;
     background-color: var(--bg-base); 
     background-size: cover; background-position: center;
+    opacity: 0; /* Start hidden */
+    animation: bgFadeIn 1.5s ease-in-out forwards; /* Fade it in smoothly */
+}
+
+@keyframes bgFadeIn {
+    to { opacity: 1; }
 }
 
 #vignette-layer {
