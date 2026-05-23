@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
         themeIconPath.setAttribute('d', newTheme === 'dark' ? sunPath : moonPath);
     });
 
+    const settingsBtn = document.getElementById('settings-btn');
+    settingsBtn.addEventListener('click', (e) => {
+        // Replace this URL with wherever your Settings page actually lives
+        triggerWarp(e, 'https://settings-rfdtq2xvdwq.teamexist.com');
+    });
+
     // 2. Intro Sequence (Drop, Fade, Unroll)
     const introContainer = document.getElementById('intro-container');
     const introLogo = document.getElementById('intro-logo');
