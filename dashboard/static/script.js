@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         themeIconPath.setAttribute('d', newTheme === 'dark' ? sunPath : moonPath);
     });
 
-    // 2. Intro Sequence
+    // 2. Intro Sequence & FADE-IN FIX
     const introContainer = document.getElementById('intro-container');
     const introLogo = document.getElementById('intro-logo');
     const mainUI = document.getElementById('main-ui');
@@ -31,29 +31,28 @@ document.addEventListener('DOMContentLoaded', () => {
             introLogo.classList.add('fade-out');
             setTimeout(() => {
                 introContainer.style.opacity = '0';
+                
+                // Trigger the main tab unroll
                 mainUI.classList.add('unrolled'); 
                 
-                setTimeout(() => {
-                    sidebarsWrapper.classList.add('revealed');
-                }, 300);
-
+                // Slide sidebars in
+                setTimeout(() => { sidebarsWrapper.classList.add('revealed'); }, 300);
                 setTimeout(() => introContainer.style.display = 'none', 800);
+
+                // --- THE FIX: Force the items to fade in AFTER the unroll completes ---
+                setTimeout(() => {
+                    const items = document.querySelectorAll('.scroll-reveal');
+                    items.forEach((el, index) => {
+                        // Cascading delay for a cool pop-in effect
+                        setTimeout(() => el.classList.add('visible'), index * 75);
+                    });
+                }, 1000); 
+
             }, 400);
         }, 1200);
     }, 100);
 
-    // 3. Scroll Reveal Observer
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                observer.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.1 });
-    document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
-
-    // 4. Warp effect -> NEW TAB
+    // 3. Warp effect -> NEW TAB
     const triggerWarp = (e, url) => {
         e.preventDefault();
         mainUI.classList.add('warp-active');
@@ -63,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
     };
 
-    // SETTINGS BUTTON EVENT LISTENER
+    // Settings button logic
     document.getElementById('settings-btn').addEventListener('click', (e) => {
         triggerWarp(e, 'https://settings-rfdtq2xvdwq.teamexist.com/#/');
     });
@@ -80,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error(err));
     });
 
-    // 5. Build Dynamic UI Charts
+    // 4. Build Dynamic UI Charts
     Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
     
     const buildGradient = (canvasId, colorTop, colorBottom) => {
@@ -151,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 6. Polling Loop
+    // 5. Polling Loop
     const fetchStats = () => {
         fetch('/api/stats')
             .then(res => res.json())
