@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <div id="bg-image-layer-overscroll" style="{% if bg_image %}background-image: url('{{ url_for('static', filename='backgrounds/' + bg_image) }}');{% endif %}"></div>
     <div id="bg-image-layer" style="{% if bg_image %}background-image: url('{{ url_for('static', filename='backgrounds/' + bg_image) }}');{% endif %}"></div>
     <div id="vignette-layer"></div>
 
@@ -18,6 +19,67 @@
 
     <div class="dashboard-layout">
         
+        <div class="sidebars-wrapper" id="sidebar-ui">
+            
+            <aside class="sidebar-glass-container glass-panel">
+                <div class="sidebar-header">
+                    <h2 id="clock-display">--:-- --</h2>
+                    <p id="weather-display">Prince George, BC: --°C</p>
+                </div>
+
+                <div class="sidebar-module">
+                    <h3>Connection Speed</h3>
+                    <div class="speed-header">
+                        <span id="speed-number">0.0</span> <span class="speed-unit">Mbps</span>
+                        <span id="speed-rating" class="speed-rating">Testing...</span>
+                    </div>
+                    <div class="chart-container mini-line">
+                        <canvas id="speedChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="sidebar-module">
+                    <h3>Server Storage</h3>
+                    <h2 id="storage-display" class="large-stat">-- GB Free</h2>
+                </div>
+
+                <div class="sidebar-module rings-module">
+                    <div class="ring-container">
+                        <canvas id="cpuChart"></canvas>
+                        <div class="ring-label">CPU</div>
+                    </div>
+                    <div class="ring-container">
+                        <canvas id="ramChart"></canvas>
+                        <div class="ring-label">RAM</div>
+                    </div>
+                </div>
+            </aside>
+
+            <aside class="sidebar-glass-container glass-panel">
+                <div class="sidebar-header">
+                    <h2>CasaOS</h2>
+                    <p id="casaos-temp-display">--°C</p>
+                </div>
+
+                <div class="sidebar-module rings-module">
+                    <div class="ring-container">
+                        <canvas id="casaosCpuChart"></canvas>
+                        <div class="ring-label">CPU</div>
+                    </div>
+                    <div class="ring-container">
+                        <canvas id="casaosRamChart"></canvas>
+                        <div class="ring-label">RAM</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-module">
+                    <h3>Storage Array</h3>
+                    <p id="casaos-storage-display" class="medium-stat" style="margin-top: 5px; font-weight: bold; opacity: 0.9;">-- / --</p>
+                </div>
+            </aside>
+
+        </div>
+
         <div class="main-glass-container glass-panel" id="main-ui">
             <nav class="top-bar">
                 <div class="nav-left">
@@ -28,7 +90,7 @@
                     </button>
                 </div>
                 <div class="nav-center">
-                    <h1 class="nav-title">Cloud</h1>
+                    <h1 class="nav-title">DWS Cloud</h1>
                 </div>
                 <div class="nav-right">
                     <button id="settings-btn" class="icon-btn" title="Settings">
@@ -65,40 +127,6 @@
                 <canvas id="uptimeChart"></canvas>
             </div>
         </div>
-
-        <aside class="sidebar-glass-container glass-panel" id="sidebar-ui">
-            <div class="sidebar-header">
-                <h2 id="clock-display">--:-- --</h2>
-                <p id="weather-display">Prince George, BC: --°C</p>
-            </div>
-
-            <div class="sidebar-module">
-                <h3>Connection Speed</h3>
-                <div class="speed-header">
-                    <span id="speed-number">0.0</span> <span class="speed-unit">Mbps</span>
-                    <span id="speed-rating" class="speed-rating">Testing...</span>
-                </div>
-                <div class="chart-container mini-line">
-                    <canvas id="speedChart"></canvas>
-                </div>
-            </div>
-
-            <div class="sidebar-module">
-                <h3>Server Storage</h3>
-                <h2 id="storage-display" class="large-stat">-- GB Free</h2>
-            </div>
-
-            <div class="sidebar-module rings-module">
-                <div class="ring-container">
-                    <canvas id="cpuChart"></canvas>
-                    <div class="ring-label">CPU</div>
-                </div>
-                <div class="ring-container">
-                    <canvas id="ramChart"></canvas>
-                    <div class="ring-label">RAM</div>
-                </div>
-            </div>
-        </aside>
 
     </div>
 
