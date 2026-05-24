@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const introContainer = document.getElementById('intro-container');
     const introLogo = document.getElementById('intro-logo');
     const mainUI = document.getElementById('main-ui');
-    const sidebarsWrapper = document.getElementById('sidebar-ui'); // Now targeting the wrapper
+    const sidebarsWrapper = document.getElementById('sidebar-ui');
 
     setTimeout(() => {
         introLogo.classList.add('dropped');
@@ -81,7 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Function to generate the clean HTML5 Canvas Gradients 
     const buildGradient = (canvasId, colorTop, colorBottom) => {
-        const ctx = document.getElementById(canvasId).getContext('2d');
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null; // Safety check
+        const ctx = canvas.getContext('2d');
         const grad = ctx.createLinearGradient(0, 0, 0, 150);
         grad.addColorStop(0, colorTop);
         grad.addColorStop(1, colorBottom);
@@ -90,8 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const gradientBlue1 = buildGradient('cpuChart', '#00d2ff', '#3a7bd5'); 
     const gradientBlue2 = buildGradient('ramChart', '#00c6ff', '#0072ff'); 
-    const gradientPurple1 = buildGradient('casaosCpuChart', '#b224ef', '#7579ff');
-    const gradientPurple2 = buildGradient('casaosRamChart', '#8e2de2', '#4a00e0');
+    
+    // FIXED: Changed from 'casaosCpuChart' to 'dwosCpuChart'
+    const gradientPurple1 = buildGradient('dwosCpuChart', '#b224ef', '#7579ff');
+    const gradientPurple2 = buildGradient('dwosRamChart', '#8e2de2', '#4a00e0');
 
     const defaultDoughnutOptions = {
         responsive: true, maintainAspectRatio: false,
@@ -126,8 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cpuChart = createRing('cpuChart', gradientBlue1);
     const ramChart = createRing('ramChart', gradientBlue2);
-    const casaosCpuChart = createRing('casaosCpuChart', gradientPurple1);
-    const casaosRamChart = createRing('casaosRamChart', gradientPurple2);
+    const dwosCpuChart = createRing('dwosCpuChart', gradientPurple1);
+    const dwosRamChart = createRing('dwosRamChart', gradientPurple2);
 
     // Speed Graph 
     const speedData = Array.from({length: 15}, () => 0);
@@ -171,14 +175,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 speedData.shift();
                 speedChart.update();
                 
-                // CasaOS Secondary Layout Updates!
-                document.getElementById('casaos-temp-display').innerText = `Temp: ${data.casaos.temp}`;
-                document.getElementById('casaos-storage-display').innerText = data.casaos.storage;
+                // DWOS Secondary Layout Updates
+                document.getElementById('dwos-temp-display').innerText = `Temp: ${data.dwos.temp}`;
+                document.getElementById('dwos-storage-display').innerText = data.dwos.storage;
                 
-                casaosCpuChart.data.datasets[0].data = [data.casaos.cpu, 100 - data.casaos.cpu];
-                casaosCpuChart.update();
-                casaosRamChart.data.datasets[0].data = [data.casaos.ram, 100 - data.casaos.ram];
-                casaosRamChart.update();
+                dwosCpuChart.data.datasets[0].data = [data.dwos.cpu, 100 - data.dwos.cpu];
+                dwosCpuChart.update();
+                dwosRamChart.data.datasets[0].data = [data.dwos.ram, 100 - data.dwos.ram];
+                dwosRamChart.update();
             })
             .catch(err => console.error("Stats Error:", err));
     };
