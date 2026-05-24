@@ -9,8 +9,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div id="bg-image-layer-overscroll" style="{% if bg_image %}background-image: url('{{ url_for('static', filename='backgrounds/' + bg_image) }}');{% endif %}"></div>
-    <div id="bg-image-layer" style="{% if bg_image %}background-image: url('{{ url_for('static', filename='backgrounds/' + bg_image) }}');{% endif %}"></div>
+    {% if bg_url %}
+        <div id="bg-image-layer-overscroll" style="background-image: url('{{ bg_url }}');"></div>
+        <div id="bg-image-layer" style="background-image: url('{{ bg_url }}');"></div>
+    {% endif %}
+    
     <div id="vignette-layer"></div>
 
     <div id="intro-container">
@@ -57,24 +60,24 @@
 
             <aside class="sidebar-glass-container glass-panel">
                 <div class="sidebar-header">
-                    <h2>CasaOS</h2>
-                    <p id="casaos-temp-display">--°C</p>
+                    <h2>DWOS</h2>
+                    <p id="dwos-temp-display">--°C</p>
                 </div>
 
                 <div class="sidebar-module rings-module">
                     <div class="ring-container">
-                        <canvas id="casaosCpuChart"></canvas>
+                        <canvas id="dwosCpuChart"></canvas>
                         <div class="ring-label">CPU</div>
                     </div>
                     <div class="ring-container">
-                        <canvas id="casaosRamChart"></canvas>
+                        <canvas id="dwosRamChart"></canvas>
                         <div class="ring-label">RAM</div>
                     </div>
                 </div>
 
                 <div class="sidebar-module">
-                    <h3>Storage Array</h3>
-                    <p id="casaos-storage-display" class="medium-stat" style="margin-top: 5px; font-weight: bold; opacity: 0.9;">-- / --</p>
+                    <h3>Storage</h3>
+                    <p id="dwos-storage-display" class="medium-stat" style="margin-top: 5px; font-weight: bold; opacity: 0.9;">-- / --</p>
                 </div>
             </aside>
 
