@@ -19,11 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
         themeIconPath.setAttribute('d', newTheme === 'dark' ? sunPath : moonPath);
     });
 
-    // 2. Intro Sequence (Drop, Fade, Unroll, Push Sidebar)
+    // 2. Intro Sequence
     const introContainer = document.getElementById('intro-container');
     const introLogo = document.getElementById('intro-logo');
     const mainUI = document.getElementById('main-ui');
-    const sidebarUI = document.getElementById('sidebar-ui');
+    const sidebarsWrapper = document.getElementById('sidebar-ui'); // Now targeting the wrapper
 
     setTimeout(() => {
         introLogo.classList.add('dropped');
@@ -31,11 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
             introLogo.classList.add('fade-out');
             setTimeout(() => {
                 introContainer.style.opacity = '0';
-                mainUI.classList.add('unrolled'); // Unrolls main container
+                mainUI.classList.add('unrolled'); 
                 
-                // Immediately after unrolling, slide sidebar in
+                // Pop the Left sidebars in!
                 setTimeout(() => {
-                    sidebarUI.classList.add('revealed');
+                    sidebarsWrapper.classList.add('revealed');
                 }, 300);
 
                 setTimeout(() => introContainer.style.display = 'none', 800);
@@ -54,14 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.1 });
     document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
 
-    // 4. Warp effect but open in NEW TAB
+    // 4. Warp effect -> NEW TAB
     const triggerWarp = (e, url) => {
         e.preventDefault();
         mainUI.classList.add('warp-active');
-        
         setTimeout(() => {
-            window.open(url, '_blank'); // Open in new tab
-            mainUI.classList.remove('warp-active'); // Revert effect immediately for returning
+            window.open(url, '_blank'); 
+            mainUI.classList.remove('warp-active'); 
         }, 400);
     };
 
@@ -77,17 +76,31 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error(err));
     });
 
-    // 5. Charts Configuration
+    // 5. Build Dynamic UI Charts
     Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+    
+    // Function to generate the clean HTML5 Canvas Gradients 
+    const buildGradient = (canvasId, colorTop, colorBottom) => {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, 0, 150);
+        grad.addColorStop(0, colorTop);
+        grad.addColorStop(1, colorBottom);
+        return grad;
+    };
+
+    const gradientBlue1 = buildGradient('cpuChart', '#00d2ff', '#3a7bd5'); 
+    const gradientBlue2 = buildGradient('ramChart', '#00c6ff', '#0072ff'); 
+    const gradientPurple1 = buildGradient('casaosCpuChart', '#b224ef', '#7579ff');
+    const gradientPurple2 = buildGradient('casaosRamChart', '#8e2de2', '#4a00e0');
+
     const defaultDoughnutOptions = {
         responsive: true, maintainAspectRatio: false,
-        cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        cutout: '80%', plugins: { legend: { display: false }, tooltip: { enabled: false } },
         animation: { duration: 500 }
     };
 
-    // Uptime Background Aesthetic Graph
-    const uptimeCtx = document.getElementById('uptimeChart').getContext('2d');
-    new Chart(uptimeCtx, {
+    // Uptime Aesthetic Graph
+    new Chart(document.getElementById('uptimeChart').getContext('2d'), {
         type: 'line',
         data: {
             labels: Array.from({length: 30}, () => ''),
@@ -104,21 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // CPU Ring
-    const cpuChart = new Chart(document.getElementById('cpuChart'), {
+    // Ring Init Array
+    const createRing = (id, color) => new Chart(document.getElementById(id), {
         type: 'doughnut',
-        data: { datasets: [{ data: [0, 100], backgroundColor: ['#4FA8FF', 'rgba(255,255,255,0.1)'], borderWidth: 0 }] },
+        data: { datasets: [{ data: [0, 100], backgroundColor: [color, 'rgba(255,255,255,0.1)'], borderWidth: 0, borderRadius: 10 }] },
         options: defaultDoughnutOptions
     });
 
-    // RAM Ring
-    const ramChart = new Chart(document.getElementById('ramChart'), {
-        type: 'doughnut',
-        data: { datasets: [{ data: [0, 100], backgroundColor: ['#FF4F81', 'rgba(255,255,255,0.1)'], borderWidth: 0 }] },
-        options: defaultDoughnutOptions
-    });
+    const cpuChart = createRing('cpuChart', gradientBlue1);
+    const ramChart = createRing('ramChart', gradientBlue2);
+    const casaosCpuChart = createRing('casaosCpuChart', gradientPurple1);
+    const casaosRamChart = createRing('casaosRamChart', gradientPurple2);
 
-    // Speed History Graph (Live Bandwidth)
+    // Speed Graph 
     const speedData = Array.from({length: 15}, () => 0);
     const speedChart = new Chart(document.getElementById('speedChart'), {
         type: 'line',
@@ -138,11 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 6. Data Polling Loop
+    // 6. Polling Loop
     const fetchStats = () => {
         fetch('/api/stats')
             .then(res => res.json())
             .then(data => {
+                // Main Server Layout
                 document.getElementById('clock-display').innerText = data.time;
                 document.getElementById('weather-display').innerText = `Prince George, BC: ${data.weather}`;
                 document.getElementById('storage-display').innerText = `${data.storage} GB Free`;
@@ -150,22 +162,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('speed-number').innerText = data.mbps;
                 document.getElementById('speed-rating').innerText = data.speed_rating;
 
-                // Update Rings
                 cpuChart.data.datasets[0].data = [data.cpu, 100 - data.cpu];
                 cpuChart.update();
-
                 ramChart.data.datasets[0].data = [data.ram, 100 - data.ram];
                 ramChart.update();
 
-                // Update Speed Graph array (push new, shift old)
                 speedData.push(data.mbps);
                 speedData.shift();
                 speedChart.update();
+                
+                // CasaOS Secondary Layout Updates!
+                document.getElementById('casaos-temp-display').innerText = `Temp: ${data.casaos.temp}`;
+                document.getElementById('casaos-storage-display').innerText = data.casaos.storage;
+                
+                casaosCpuChart.data.datasets[0].data = [data.casaos.cpu, 100 - data.casaos.cpu];
+                casaosCpuChart.update();
+                casaosRamChart.data.datasets[0].data = [data.casaos.ram, 100 - data.casaos.ram];
+                casaosRamChart.update();
             })
             .catch(err => console.error("Stats Error:", err));
     };
 
-    // Run immediately, then every 3 seconds
     fetchStats();
     setInterval(fetchStats, 3000);
 });
