@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>DWS Cloud</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ range(1000, 9999)|random }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -76,14 +76,14 @@
                 </div>
 
                 <div class="sidebar-module">
-                    <h3>Storage</h3>
+                    <h3>Storage Array</h3>
                     <p id="dwos-storage-display" class="medium-stat" style="margin-top: 5px; font-weight: bold; opacity: 0.9;">-- / --</p>
                 </div>
             </aside>
 
             <aside class="sidebar-glass-container glass-panel">
                 <div class="sidebar-header">
-                    <h2>Ramble</h2>
+                    <h2>AI Ramblings</h2>
                 </div>
                 <div class="sidebar-module" id="ai-thoughts-container">
                     <p class="ai-thought">Awaiting transmission...</p>
@@ -142,6 +142,6 @@
 
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v={{ range(1000, 9999)|random }}"></script>
 </body>
 </html>
