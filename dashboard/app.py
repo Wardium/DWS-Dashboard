@@ -4,16 +4,17 @@ from urllib.parse import urlparse
 import os
 import random
 import threading
+import psutil
+import time
+from datetime import datetime
 from playwright.sync_api import sync_playwright
 
 app = Flask(__name__)
 
-# Build absolute paths based on where app.py is located
 STATIC_DIR = os.path.join(app.root_path, "static")
 SCREENSHOTS_DIR = os.path.join(STATIC_DIR, "screenshots")
 BACKGROUNDS_DIR = os.path.join(STATIC_DIR, "backgrounds")
 
-# Ensure directories exist upon startup
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 os.makedirs(BACKGROUNDS_DIR, exist_ok=True)
 
@@ -44,19 +45,17 @@ APPLETS = [
     {"name": "HomePage", "url": "https://teamexist.com", "full_width": False}
 ]
 
+# Track bandwidth over time
+last_net = psutil.net_io_counters()
+last_time = time.time()
+
 def capture_screenshot_bg(url, filepath):
-    """Runs in the background to silently update the screenshot."""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 1280, "height": 720})
-            
-            # Wait until network traffic stops, with a longer 20s timeout
             page.goto(url, wait_until="networkidle", timeout=50000)
-            
-            # Force Playwright to wait exactly 5000 milliseconds (5 seconds)
             page.wait_for_timeout(5000) 
-            
             page.screenshot(path=filepath)
             browser.close()
             print(f"Successfully snapped: {url}")
@@ -65,7 +64,6 @@ def capture_screenshot_bg(url, filepath):
 
 @app.route('/favicon.ico')
 def favicon():
-    # Force the browser to use your favicon.png from the static folder
     favicon_path = os.path.join(STATIC_DIR, "favicon.png")
     if os.path.exists(favicon_path):
         return send_file(favicon_path, mimetype='image/png')
@@ -73,11 +71,52 @@ def favicon():
 
 @app.route('/')
 def index():
-    # Pick a random background from static/backgrounds safely
     bgs = [f for f in os.listdir(BACKGROUNDS_DIR) if f.endswith('.jpg')]
     bg_image = random.choice(bgs) if bgs else None
-
     return render_template('index.html', default_sites=DEFAULT_SITES, applets=APPLETS, bg_image=bg_image)
+
+@app.route('/api/stats')
+def stats():
+    global last_net, last_time
+    
+    # 1. CPU & RAM
+    cpu = psutil.cpu_percent(interval=None)
+    ram = psutil.virtual_memory().percent
+    
+    # 2. Storage
+    disk = psutil.disk_usage('/')
+    free_gb = round(disk.free / (1024**3), 1)
+    
+    # 3. Bandwidth / Speed
+    now_net = psutil.net_io_counters()
+    now_time = time.time()
+    delta_bytes = (now_net.bytes_sent + now_net.bytes_recv) - (last_net.bytes_sent + last_net.bytes_recv)
+    delta_time = now_time - last_time
+    mbps = round((delta_bytes * 8) / 1000000 / delta_time, 2) if delta_time > 0 else 0.0
+    
+    last_net = now_net
+    last_time = now_time
+    
+    speed_rating = "Really Fast! 🚀" if mbps > 200 else "Fast ⚡" if mbps > 50 else "Good 👍" if mbps > 10 else "Slow 🐢" if mbps > 1 else "Really Slow... 🐌"
+
+    # 4. Weather 
+    weather_desc = "--°C"
+    try:
+        w_url = "https://api.open-meteo.com/v1/forecast?latitude=53.9171&longitude=-122.7497&current_weather=true"
+        w_res = requests.get(w_url, timeout=2).json()
+        weather_desc = f"{w_res['current_weather']['temperature']}°C"
+    except:
+        pass
+
+    return jsonify({
+        "time": datetime.now().strftime("%I:%M %p"),
+        "weather": weather_desc,
+        "cpu": cpu,
+        "ram": ram,
+        "storage": free_gb,
+        "mbps": mbps,
+        "speed_rating": speed_rating
+    })
 
 @app.route('/status')
 def check_status():
@@ -101,23 +140,16 @@ def get_screenshot():
         safe_name = domain.replace(".", "_") + ".png"
         filepath = os.path.join(SCREENSHOTS_DIR, safe_name)
         
-        # Fire off the thread to take the picture for *next* time
         threading.Thread(target=capture_screenshot_bg, args=(url, filepath)).start()
 
-        # Check if file exists, else use fallback
         if os.path.exists(filepath):
             return send_file(filepath, mimetype='image/png')
         else:
-            # Fallback to the logo using absolute path
             fallback = os.path.join(STATIC_DIR, "logo.png")
             if os.path.exists(fallback):
                 return send_file(fallback, mimetype='image/png')
-            
-            # If even the logo is missing, send a blank response instead of crashing
             return "", 404
-            
     except Exception as e:
-        # If anything breaks, print it to the console so we can see it, and return 500 cleanly
         print(f"Error in /screenshot route: {e}")
         return "Internal Server Error", 500
 
