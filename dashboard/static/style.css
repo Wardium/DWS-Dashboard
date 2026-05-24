@@ -13,7 +13,7 @@
     --glass-bg: rgba(15, 23, 42, 0.35);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    --vignette: linear-gradient(90deg, hsla(214, 51%, 54%, 1) 0%, hsla(243, 56%, 36%, 1) 100%);
+    --vignette: radial-gradient(circle, transparent 40%, rgba(0, 86, 179, 0.6) 120%);
     --bg-base: #000000;
 }
 
