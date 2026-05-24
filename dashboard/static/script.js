@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 introContainer.style.opacity = '0';
                 mainUI.classList.add('unrolled'); 
                 
-                // Pop the Left sidebars in!
                 setTimeout(() => {
                     sidebarsWrapper.classList.add('revealed');
                 }, 300);
@@ -64,6 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
     };
 
+    // SETTINGS BUTTON EVENT LISTENER
+    document.getElementById('settings-btn').addEventListener('click', (e) => {
+        triggerWarp(e, 'https://settings-rfdtq2xvdwq.teamexist.com/#/');
+    });
+
     document.querySelectorAll('.applet-card').forEach(applet => {
         const url = applet.getAttribute('data-url');
         applet.onclick = (e) => triggerWarp(e, url);
@@ -79,10 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Build Dynamic UI Charts
     Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
     
-    // Function to generate the clean HTML5 Canvas Gradients 
     const buildGradient = (canvasId, colorTop, colorBottom) => {
         const canvas = document.getElementById(canvasId);
-        if (!canvas) return null; // Safety check
+        if (!canvas) return null;
         const ctx = canvas.getContext('2d');
         const grad = ctx.createLinearGradient(0, 0, 0, 150);
         grad.addColorStop(0, colorTop);
@@ -92,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const gradientBlue1 = buildGradient('cpuChart', '#00d2ff', '#3a7bd5'); 
     const gradientBlue2 = buildGradient('ramChart', '#00c6ff', '#0072ff'); 
-    
-    // FIXED: Changed from 'casaosCpuChart' to 'dwosCpuChart'
     const gradientPurple1 = buildGradient('dwosCpuChart', '#b224ef', '#7579ff');
     const gradientPurple2 = buildGradient('dwosRamChart', '#8e2de2', '#4a00e0');
 
@@ -103,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         animation: { duration: 500 }
     };
 
-    // Uptime Aesthetic Graph
     new Chart(document.getElementById('uptimeChart').getContext('2d'), {
         type: 'line',
         data: {
@@ -121,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Ring Init Array
     const createRing = (id, color) => new Chart(document.getElementById(id), {
         type: 'doughnut',
         data: { datasets: [{ data: [0, 100], backgroundColor: [color, 'rgba(255,255,255,0.1)'], borderWidth: 0, borderRadius: 10 }] },
@@ -133,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dwosCpuChart = createRing('dwosCpuChart', gradientPurple1);
     const dwosRamChart = createRing('dwosRamChart', gradientPurple2);
 
-    // Speed Graph 
     const speedData = Array.from({length: 15}, () => 0);
     const speedChart = new Chart(document.getElementById('speedChart'), {
         type: 'line',
@@ -158,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/stats')
             .then(res => res.json())
             .then(data => {
-                // Main Server Layout
                 document.getElementById('clock-display').innerText = data.time;
                 document.getElementById('weather-display').innerText = `Prince George, BC: ${data.weather}`;
                 document.getElementById('storage-display').innerText = `${data.storage} GB Free`;
@@ -175,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 speedData.shift();
                 speedChart.update();
                 
-                // DWOS Secondary Layout Updates
                 document.getElementById('dwos-temp-display').innerText = `Temp: ${data.dwos.temp}`;
                 document.getElementById('dwos-storage-display').innerText = data.dwos.storage;
                 
@@ -183,6 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 dwosCpuChart.update();
                 dwosRamChart.data.datasets[0].data = [data.dwos.ram, 100 - data.dwos.ram];
                 dwosRamChart.update();
+                
+                // AI Ramblings Layout Update
+                if (data.ai_thoughts && data.ai_thoughts.length > 0) {
+                    const aiContainer = document.getElementById('ai-thoughts-container');
+                    aiContainer.innerHTML = data.ai_thoughts.map(t => `<p class="ai-thought">"${t}"</p>`).join('');
+                }
             })
             .catch(err => console.error("Stats Error:", err));
     };
