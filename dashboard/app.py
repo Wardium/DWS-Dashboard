@@ -62,7 +62,9 @@ def scrape_casaos_bg():
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
-                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="networkidle", timeout=60000)
+                
+                # CHANGED wait_until from "networkidle" to "domcontentloaded"
+                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="domcontentloaded", timeout=60000)
                 
                 # Wait for the DOM elements to load in
                 page.wait_for_selector(".overlay .per", timeout=15000)
@@ -99,7 +101,9 @@ def capture_screenshot_bg(url, filepath):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 1280, "height": 720})
-            page.goto(url, wait_until="networkidle", timeout=50000)
+            
+            # Using domcontentloaded here as well to prevent applet screenshot timeouts
+            page.goto(url, wait_until="domcontentloaded", timeout=50000)
             page.wait_for_timeout(5000) 
             page.screenshot(path=filepath)
             browser.close()
@@ -157,7 +161,7 @@ def stats():
         "storage": free_gb,
         "mbps": mbps,
         "speed_rating": speed_rating,
-        "casaos": casaos_data  # Feed the scraped CasaOS data to the frontend
+        "casaos": casaos_data
     })
 
 @app.route('/status')
@@ -196,6 +200,5 @@ def get_screenshot():
         return "Internal Server Error", 500
 
 if __name__ == '__main__':
-    # Fire up the scraper thread right before the server boots!
     threading.Thread(target=scrape_casaos_bg, daemon=True).start()
     app.run(host='0.0.0.0', port=6060, debug=False)
