@@ -70,7 +70,7 @@ def generate_ai_thoughts_bg():
                     "Content-Type": "application/json",
                 },
                 data=json.dumps({
-                    "model": "deepseek/deepseek-v4-flash:free",
+                    "model": "openrouter/free",
                     "messages": [
                         {
                             "role": "user",
