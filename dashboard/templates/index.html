@@ -2,71 +2,104 @@
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>DWS Cloud</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Random Background Image -->
     <div id="bg-image-layer" style="{% if bg_image %}background-image: url('{{ url_for('static', filename='backgrounds/' + bg_image) }}');{% endif %}"></div>
     <div id="vignette-layer"></div>
 
-    <!-- Intro Overlay (Smooth Drop) -->
     <div id="intro-container">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="DWS Logo" class="intro-logo" id="intro-logo">
     </div>
 
-    <!-- Main Glass UI (Unrolls like a scroll) -->
-    <div class="main-glass-container glass-panel" id="main-ui">
-        <nav class="top-bar">
-            <div class="nav-left">
-                <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
-                    <!-- SVG Sun/Moon Icon -->
-                    <svg class="flat-icon" viewBox="0 0 24 24" id="theme-icon">
-                        <path d="M12 21c-4.962 0-9-4.038-9-9s4.038-9 9-9c1.605 0 3.122.42 4.453 1.164a8.956 8.956 0 00-6.289 8.528 8.955 8.955 0 005.803 8.358A8.995 8.995 0 0112 21z"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="nav-center">
-                <h1 class="nav-title">Cloud</h1>
-            </div>
-            <div class="nav-right">
-                <button id="settings-btn" class="icon-btn" title="Settings">
-                    <!-- SVG Gear Icon -->
-                    <svg class="flat-icon" viewBox="0 0 24 24">
-                        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
-                    </svg>
-                </button>
-            </div>
-        </nav>
-
-        <main class="content-wrapper">
-            <section class="default-sites">
-                {% for site in default_sites %}
-                <a href="{{ site.url }}" class="glass-card site-link floating-bubbly scroll-reveal">
-                    <img src="https://www.google.com/s2/favicons?domain={{ site.url }}&sz=64" alt="icon" class="site-icon">
-                    <span>{{ site.name }}</span>
-                </a>
-                {% endfor %}
-            </section>
-
-            <section class="applets-grid">
-                {% for applet in applets %}
-                <div class="glass-card applet-card floating-bubbly scroll-reveal {% if applet.full_width %}full-width{% endif %}" data-url="{{ applet.url }}">
-                    <div class="applet-image-container">
-                        <img src="/screenshot?url={{ applet.url }}" alt="{{ applet.name }}" class="applet-screenshot" loading="lazy">
-                    </div>
-                    <div class="applet-label">{{ applet.name }}</div>
+    <div class="dashboard-layout">
+        
+        <div class="main-glass-container glass-panel" id="main-ui">
+            <nav class="top-bar">
+                <div class="nav-left">
+                    <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
+                        <svg class="flat-icon" viewBox="0 0 24 24" id="theme-icon">
+                            <path d="M12 21c-4.962 0-9-4.038-9-9s4.038-9 9-9c1.605 0 3.122.42 4.453 1.164a8.956 8.956 0 00-6.289 8.528 8.955 8.955 0 005.803 8.358A8.995 8.995 0 0112 21z"/>
+                        </svg>
+                    </button>
                 </div>
-                {% endfor %}
-            </section>
-        </main>
+                <div class="nav-center">
+                    <h1 class="nav-title">Cloud</h1>
+                </div>
+                <div class="nav-right">
+                    <button id="settings-btn" class="icon-btn" title="Settings">
+                        <svg class="flat-icon" viewBox="0 0 24 24">
+                            <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                        </svg>
+                    </button>
+                </div>
+            </nav>
 
-        <div class="footer-graph">
-            <canvas id="uptimeChart"></canvas>
+            <main class="content-wrapper">
+                <section class="default-sites">
+                    {% for site in default_sites %}
+                    <a href="{{ site.url }}" target="_blank" rel="noopener noreferrer" class="glass-card site-link floating-bubbly scroll-reveal">
+                        <img src="https://www.google.com/s2/favicons?domain={{ site.url }}&sz=64" alt="icon" class="site-icon">
+                        <span>{{ site.name }}</span>
+                    </a>
+                    {% endfor %}
+                </section>
+
+                <section class="applets-grid">
+                    {% for applet in applets %}
+                    <div class="glass-card applet-card floating-bubbly scroll-reveal {% if applet.full_width %}full-width{% endif %}" data-url="{{ applet.url }}">
+                        <div class="applet-image-container">
+                            <img src="/screenshot?url={{ applet.url }}" alt="{{ applet.name }}" class="applet-screenshot" loading="lazy">
+                        </div>
+                        <div class="applet-label">{{ applet.name }}</div>
+                    </div>
+                    {% endfor %}
+                </section>
+            </main>
+
+            <div class="footer-graph">
+                <canvas id="uptimeChart"></canvas>
+            </div>
         </div>
+
+        <aside class="sidebar-glass-container glass-panel" id="sidebar-ui">
+            <div class="sidebar-header">
+                <h2 id="clock-display">--:-- --</h2>
+                <p id="weather-display">Prince George, BC: --°C</p>
+            </div>
+
+            <div class="sidebar-module">
+                <h3>Connection Speed</h3>
+                <div class="speed-header">
+                    <span id="speed-number">0.0</span> <span class="speed-unit">Mbps</span>
+                    <span id="speed-rating" class="speed-rating">Testing...</span>
+                </div>
+                <div class="chart-container mini-line">
+                    <canvas id="speedChart"></canvas>
+                </div>
+            </div>
+
+            <div class="sidebar-module">
+                <h3>Server Storage</h3>
+                <h2 id="storage-display" class="large-stat">-- GB Free</h2>
+            </div>
+
+            <div class="sidebar-module rings-module">
+                <div class="ring-container">
+                    <canvas id="cpuChart"></canvas>
+                    <div class="ring-label">CPU</div>
+                </div>
+                <div class="ring-container">
+                    <canvas id="ramChart"></canvas>
+                    <div class="ring-label">RAM</div>
+                </div>
+            </div>
+        </aside>
+
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
