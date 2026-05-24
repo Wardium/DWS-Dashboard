@@ -45,38 +45,62 @@ APPLETS = [
     {"name": "HomePage", "url": "https://teamexist.com", "full_width": False}
 ]
 
-# Track bandwidth over time
 last_net = psutil.net_io_counters()
 last_time = time.time()
 
-# Store Scraped CasaOS Data
-casaos_data = {
+# Store Scraped DWOS Data
+dwos_data = {
     "cpu": 0, "ram": 0, "temp": "--°C", "storage": "Loading..."
 }
 
-def scrape_casaos_bg():
-    """Runs infinitely in the background scraping CasaOS."""
-    global casaos_data
+def scrape_dwos_bg():
+    """Runs infinitely in the background scraping DWOS, handling logins."""
+    global dwos_data
     while True:
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
+                context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                page = context.new_page()
                 
-                # CHANGED wait_until from "networkidle" to "domcontentloaded"
-                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="domcontentloaded", timeout=60000)
+                # Navigate to the dashboard
+                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="load", timeout=60000)
                 
-                # Wait for the DOM elements to load in
-                page.wait_for_selector(".overlay .per", timeout=15000)
+                # Give Vue.js a second to draw the interface (whether it's the login screen or dashboard)
+                page.wait_for_timeout(3000)
                 
-                # Extract CPU & RAM Numbers
+                # --- NEW LOGIN LOGIC ---
+                # Check if there is a password input on the screen
+                password_input = page.locator("input[type='password']")
+                if password_input.count() > 0:
+                    print("DWOS Login screen detected. Attempting to log in...")
+                    
+                    # Target the username field (usually the first text-based input on the login form)
+                    username_input = page.locator("input[type='text'], input[name='username'], input[placeholder*='sername']").first
+                    if username_input.count() > 0:
+                        username_input.fill("dylan")
+                    
+                    # Target the password field
+                    password_input.first.fill("weqr1234")
+                    
+                    # Press enter on the password field to submit the form
+                    password_input.first.press("Enter")
+                    
+                    # Wait for the login redirect and the actual dashboard to load
+                    page.wait_for_timeout(5000)
+                # -----------------------
+                
+                # Now wait for the actual dashboard stat elements
+                page.wait_for_selector(".overlay .per", state="attached", timeout=15000)
+                
+                # Extract CPU & RAM
                 cpu = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
                 ram = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
                 
                 # Extract Temp
                 temp = page.evaluate("() => document.querySelector('.bar-content.is-clickable')?.innerText || '--°C'")
                 
-                # Extract Storage string
+                # Extract Storage
                 storage = page.evaluate("""() => {
                     let diskNodes = document.querySelectorAll('.disk-info');
                     if(diskNodes.length > 0) {
@@ -85,14 +109,23 @@ def scrape_casaos_bg():
                     return 'Unknown';
                 }""")
                 
-                casaos_data["cpu"] = int(cpu)
-                casaos_data["ram"] = int(ram)
-                casaos_data["temp"] = temp
-                casaos_data["storage"] = storage
+                # Update global dictionary
+                dwos_data["cpu"] = int(cpu)
+                dwos_data["ram"] = int(ram)
+                dwos_data["temp"] = temp
+                dwos_data["storage"] = storage
                 
+                print(f"DWOS Scrape Successful: CPU {cpu}%, RAM {ram}%")
                 browser.close()
+                
         except Exception as e:
-            print(f"CasaOS Scrape Failed: {e}")
+            print(f"DWOS Scrape Failed: {e}")
+            try:
+                page.screenshot(path="debug_scraper.png")
+                print("Saved debug screenshot to debug_scraper.png so you can see what went wrong.")
+                browser.close()
+            except:
+                pass
             
         time.sleep(30) # Scrape every 30 seconds
 
@@ -101,8 +134,6 @@ def capture_screenshot_bg(url, filepath):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 1280, "height": 720})
-            
-            # Using domcontentloaded here as well to prevent applet screenshot timeouts
             page.goto(url, wait_until="domcontentloaded", timeout=50000)
             page.wait_for_timeout(5000) 
             page.screenshot(path=filepath)
@@ -126,9 +157,8 @@ def index():
 
 @app.route('/api/stats')
 def stats():
-    global last_net, last_time, casaos_data
+    global last_net, last_time, dwos_data
     
-    # Local Server Stats
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/')
@@ -161,7 +191,7 @@ def stats():
         "storage": free_gb,
         "mbps": mbps,
         "speed_rating": speed_rating,
-        "casaos": casaos_data
+        "dwos": dwos_data
     })
 
 @app.route('/status')
@@ -200,5 +230,5 @@ def get_screenshot():
         return "Internal Server Error", 500
 
 if __name__ == '__main__':
-    threading.Thread(target=scrape_casaos_bg, daemon=True).start()
+    threading.Thread(target=scrape_dwos_bg, daemon=True).start()
     app.run(host='0.0.0.0', port=6060, debug=False)
