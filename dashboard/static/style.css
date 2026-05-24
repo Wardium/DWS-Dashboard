@@ -20,8 +20,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
 
 html, body {
-    background-color: var(--bg-base);
-    transition: background-color 0.5s ease;
+    background-color: var(--bg-base); /* Base is explicitly behind everything */
     overscroll-behavior-y: none;
     color: var(--text-color);
     min-height: 100vh;
@@ -36,22 +35,21 @@ body {
     padding: 20px;
 }
 
-/* Background Photo Logic - Two layers to fix overscroll */
+/* Base layers fixed: positive z-indexes so they aren't hidden */
 #bg-image-layer-overscroll {
     position: fixed; 
-    inset: -20%; /* Huge image strictly to catch Apple's drag-scroll edges */
-    z-index: -3;
-    background-color: var(--bg-base); 
+    inset: -20%;
+    z-index: 1; /* Lowest visible layer */
     background-size: cover; 
     background-position: center;
-    filter: blur(8px) brightness(0.7); /* Blend it so the pull isn't harsh */
+    filter: blur(8px) brightness(0.7);
     opacity: 0;
     animation: bgFadeIn 1.5s ease-in-out forwards;
 }
 
 #bg-image-layer {
-    position: fixed; inset: 0; z-index: -2; /* Exact 100% viewport size */
-    background-color: var(--bg-base); 
+    position: fixed; inset: 0; 
+    z-index: 2; /* Main Image layer */
     background-size: cover; background-position: center;
     opacity: 0;
     animation: bgFadeIn 1.5s ease-in-out forwards;
@@ -60,7 +58,8 @@ body {
 @keyframes bgFadeIn { to { opacity: 1; } }
 
 #vignette-layer {
-    position: fixed; inset: 0; z-index: -1;
+    position: fixed; inset: 0; 
+    z-index: 3; /* Dark gradient layer */
     background: var(--vignette);
     pointer-events: none;
     transition: background 0.5s ease;
@@ -82,22 +81,22 @@ body {
     gap: 20px;
     align-items: stretch;
     justify-content: center;
+    position: relative;
+    z-index: 10; /* Put UI in front of all backgrounds */
 }
 
-/* MAIN UI CONTAINER */
 .main-glass-container {
     flex-grow: 1;
     max-width: 1250px;
     border-radius: 24px; overflow: hidden;
     display: flex; flex-direction: column;
-    position: relative; z-index: 1;
+    position: relative; 
     clip-path: inset(0 0 100% 0);
     transition: clip-path 1.2s cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 .main-glass-container.unrolled { clip-path: inset(0 0 0 0); }
 
-/* SIDEBAR WRAPPER */
 .sidebars-wrapper {
     width: 0;
     opacity: 0;
@@ -109,36 +108,19 @@ body {
     transition: width 0.8s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.8s ease;
 }
 
-.sidebars-wrapper.revealed {
-    width: 380px; /* Widened nicely! */
-    opacity: 1;
-}
+.sidebars-wrapper.revealed { width: 380px; opacity: 1; }
 
-/* Mobile check: Hide sidebar completely */
 @media (max-width: 992px) {
     .sidebars-wrapper { display: none !important; }
 }
 
-.sidebar-glass-container {
-    width: 100%;
-    padding: 25px;
-    border-radius: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-}
+.sidebar-glass-container { width: 100%; padding: 25px; border-radius: 24px; display: flex; flex-direction: column; gap: 25px; }
 
-/* Sidebar Specific Layout */
 .sidebar-header { text-align: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; }
 .sidebar-header h2 { font-size: 2.2rem; font-family: Georgia, serif; letter-spacing: 1px; }
 .sidebar-header p { font-size: 0.9rem; opacity: 0.8; margin-top: 5px; }
 
-.sidebar-module {
-    background: rgba(0,0,0,0.15);
-    border-radius: 16px;
-    padding: 15px;
-    border: 1px solid var(--glass-border);
-}
+.sidebar-module { background: rgba(0,0,0,0.15); border-radius: 16px; padding: 15px; border: 1px solid var(--glass-border); }
 .sidebar-module h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 8px;}
 .speed-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
 #speed-number { font-size: 1.8rem; font-weight: bold; }
@@ -148,12 +130,10 @@ body {
 .chart-container.mini-line { height: 60px; width: 100%; }
 .large-stat { font-size: 1.6rem; font-family: Georgia, serif; }
 
-/* Unified Rings Module inside one box */
 .rings-module { display: flex; justify-content: space-between; gap: 15px; }
 .ring-container { position: relative; width: 48%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
 .ring-label { position: absolute; font-size: 0.85rem; font-weight: bold; opacity: 0.8; }
 
-/* Existing Animations & Elements */
 #intro-container { position: fixed; inset: 0; z-index: 9999; display: flex; justify-content: center; align-items: center; background-color: var(--bg-base); transition: opacity 0.8s ease; }
 .intro-logo { width: 300px; height: 300px; object-fit: contain; transform: translateY(-100vh); opacity: 0; transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s; }
 .intro-logo.dropped { transform: translateY(0); opacity: 1; }
