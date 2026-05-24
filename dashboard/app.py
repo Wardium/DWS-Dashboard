@@ -48,86 +48,72 @@ APPLETS = [
 last_net = psutil.net_io_counters()
 last_time = time.time()
 
-# Store Scraped DWOS Data
+# Global dict to store live DWOS data
 dwos_data = {
-    "cpu": 0, "ram": 0, "temp": "--°C", "storage": "Loading..."
+    "cpu": 0, "ram": 0, "temp": "--°C", "storage": "-- / --"
 }
 
 def scrape_dwos_bg():
-    """Runs infinitely in the background scraping DWOS, handling logins."""
+    """Persistent browser session to scrape DWOS live data continuously."""
     global dwos_data
     while True:
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
-                context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                context = browser.new_context()
                 page = context.new_page()
                 
-                # Navigate to the dashboard
+                print("Connecting to DWOS...")
                 page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="load", timeout=60000)
-                
-                # Give Vue.js a second to draw the interface (whether it's the login screen or dashboard)
                 page.wait_for_timeout(3000)
                 
-                # --- NEW LOGIN LOGIC ---
-                # Check if there is a password input on the screen
-                password_input = page.locator("input[type='password']")
-                if password_input.count() > 0:
-                    print("DWOS Login screen detected. Attempting to log in...")
+                # LOGIN CHECK
+                if page.locator("input[type='password']").count() > 0:
+                    print("DWOS Login required. Submitting credentials...")
+                    user_input = page.locator("input[type='text']").first
+                    if user_input.count() > 0:
+                        user_input.fill("dylan")
                     
-                    # Target the username field (usually the first text-based input on the login form)
-                    username_input = page.locator("input[type='text'], input[name='username'], input[placeholder*='sername']").first
-                    if username_input.count() > 0:
-                        username_input.fill("dylan")
+                    page.locator("input[type='password']").first.fill("weqr1234")
+                    page.locator("input[type='password']").first.press("Enter")
+                    page.wait_for_timeout(5000) # Wait for animation/redirect
+                
+                # Wait for main dashboard to be fully ready
+                page.wait_for_selector(".overlay .per", state="attached", timeout=20000)
+                print("DWOS Dashboard loaded successfully! Starting live polling...")
+                
+                # Stay on the page and poll the DOM every 5 seconds! (Much faster than reloading)
+                while True:
+                    cpu = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
+                    ram = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
                     
-                    # Target the password field
-                    password_input.first.fill("weqr1234")
+                    # Robust Regex fallback for Temp
+                    temp = page.evaluate("""() => {
+                        let match = document.body.innerText.match(/(\\d+)°C/);
+                        return match ? match[1] + '°C' : '--°C';
+                    }""")
                     
-                    # Press enter on the password field to submit the form
-                    password_input.first.press("Enter")
+                    # Robust Regex fallback for Storage
+                    storage = page.evaluate("""() => {
+                        let text = document.body.innerText;
+                        let used = text.match(/Used:\\s*([\\d\\.]+\\s*[A-Z]+)/i);
+                        let total = text.match(/Total:\\s*([\\d\\.]+\\s*[A-Z]+)/i);
+                        if (used && total) {
+                            return used[1] + ' / ' + total[1];
+                        }
+                        return 'Unknown';
+                    }""")
                     
-                    # Wait for the login redirect and the actual dashboard to load
-                    page.wait_for_timeout(5000)
-                # -----------------------
-                
-                # Now wait for the actual dashboard stat elements
-                page.wait_for_selector(".overlay .per", state="attached", timeout=15000)
-                
-                # Extract CPU & RAM
-                cpu = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
-                ram = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
-                
-                # Extract Temp
-                temp = page.evaluate("() => document.querySelector('.bar-content.is-clickable')?.innerText || '--°C'")
-                
-                # Extract Storage
-                storage = page.evaluate("""() => {
-                    let diskNodes = document.querySelectorAll('.disk-info');
-                    if(diskNodes.length > 0) {
-                        return diskNodes[0].innerText.replace(/\\n/g, ' / ');
-                    }
-                    return 'Unknown';
-                }""")
-                
-                # Update global dictionary
-                dwos_data["cpu"] = int(cpu)
-                dwos_data["ram"] = int(ram)
-                dwos_data["temp"] = temp
-                dwos_data["storage"] = storage
-                
-                print(f"DWOS Scrape Successful: CPU {cpu}%, RAM {ram}%")
-                browser.close()
-                
+                    dwos_data["cpu"] = int(cpu) if cpu.isdigit() else 0
+                    dwos_data["ram"] = int(ram) if ram.isdigit() else 0
+                    dwos_data["temp"] = temp
+                    dwos_data["storage"] = storage
+                    
+                    time.sleep(5) # Poll dynamically while connected
+                    
         except Exception as e:
-            print(f"DWOS Scrape Failed: {e}")
-            try:
-                page.screenshot(path="debug_scraper.png")
-                print("Saved debug screenshot to debug_scraper.png so you can see what went wrong.")
-                browser.close()
-            except:
-                pass
-            
-        time.sleep(30) # Scrape every 30 seconds
+            print(f"DWOS Scraper Connection lost/Error: {e}. Reconnecting in 10s...")
+            time.sleep(10)
 
 def capture_screenshot_bg(url, filepath):
     try:
@@ -138,7 +124,6 @@ def capture_screenshot_bg(url, filepath):
             page.wait_for_timeout(5000) 
             page.screenshot(path=filepath)
             browser.close()
-            print(f"Successfully snapped: {url}")
     except Exception as e:
         print(f"Failed to screenshot {url}: {e}")
 
@@ -151,9 +136,11 @@ def favicon():
 
 @app.route('/')
 def index():
-    bgs = [f for f in os.listdir(BACKGROUNDS_DIR) if f.endswith('.jpg')]
-    bg_image = random.choice(bgs) if bgs else None
-    return render_template('index.html', default_sites=DEFAULT_SITES, applets=APPLETS, bg_image=bg_image)
+    # Pass clean URL string directly to frontend to avoid Jinja path issues
+    bgs = [f for f in os.listdir(BACKGROUNDS_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    bg_url = f"/static/backgrounds/{random.choice(bgs)}" if bgs else ""
+    
+    return render_template('index.html', default_sites=DEFAULT_SITES, applets=APPLETS, bg_url=bg_url)
 
 @app.route('/api/stats')
 def stats():
@@ -211,11 +198,9 @@ def get_screenshot():
         url = request.args.get('url')
         if not url:
             return "No URL provided", 400
-            
         domain = urlparse(url).netloc
         safe_name = domain.replace(".", "_") + ".png"
         filepath = os.path.join(SCREENSHOTS_DIR, safe_name)
-        
         threading.Thread(target=capture_screenshot_bg, args=(url, filepath)).start()
 
         if os.path.exists(filepath):
@@ -225,8 +210,7 @@ def get_screenshot():
             if os.path.exists(fallback):
                 return send_file(fallback, mimetype='image/png')
             return "", 404
-    except Exception as e:
-        print(f"Error in /screenshot route: {e}")
+    except Exception:
         return "Internal Server Error", 500
 
 if __name__ == '__main__':
