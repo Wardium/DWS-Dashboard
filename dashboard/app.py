@@ -49,6 +49,51 @@ APPLETS = [
 last_net = psutil.net_io_counters()
 last_time = time.time()
 
+# Store Scraped CasaOS Data
+casaos_data = {
+    "cpu": 0, "ram": 0, "temp": "--°C", "storage": "Loading..."
+}
+
+def scrape_casaos_bg():
+    """Runs infinitely in the background scraping CasaOS."""
+    global casaos_data
+    while True:
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="networkidle", timeout=60000)
+                
+                # Wait for the DOM elements to load in
+                page.wait_for_selector(".overlay .per", timeout=15000)
+                
+                # Extract CPU & RAM Numbers
+                cpu = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
+                ram = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
+                
+                # Extract Temp
+                temp = page.evaluate("() => document.querySelector('.bar-content.is-clickable')?.innerText || '--°C'")
+                
+                # Extract Storage string
+                storage = page.evaluate("""() => {
+                    let diskNodes = document.querySelectorAll('.disk-info');
+                    if(diskNodes.length > 0) {
+                        return diskNodes[0].innerText.replace(/\\n/g, ' / ');
+                    }
+                    return 'Unknown';
+                }""")
+                
+                casaos_data["cpu"] = int(cpu)
+                casaos_data["ram"] = int(ram)
+                casaos_data["temp"] = temp
+                casaos_data["storage"] = storage
+                
+                browser.close()
+        except Exception as e:
+            print(f"CasaOS Scrape Failed: {e}")
+            
+        time.sleep(30) # Scrape every 30 seconds
+
 def capture_screenshot_bg(url, filepath):
     try:
         with sync_playwright() as p:
@@ -77,17 +122,14 @@ def index():
 
 @app.route('/api/stats')
 def stats():
-    global last_net, last_time
+    global last_net, last_time, casaos_data
     
-    # 1. CPU & RAM
+    # Local Server Stats
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
-    
-    # 2. Storage
     disk = psutil.disk_usage('/')
     free_gb = round(disk.free / (1024**3), 1)
     
-    # 3. Bandwidth / Speed
     now_net = psutil.net_io_counters()
     now_time = time.time()
     delta_bytes = (now_net.bytes_sent + now_net.bytes_recv) - (last_net.bytes_sent + last_net.bytes_recv)
@@ -99,7 +141,6 @@ def stats():
     
     speed_rating = "Really Fast! 🚀" if mbps > 200 else "Fast ⚡" if mbps > 50 else "Good 👍" if mbps > 10 else "Slow 🐢" if mbps > 1 else "Really Slow... 🐌"
 
-    # 4. Weather 
     weather_desc = "--°C"
     try:
         w_url = "https://api.open-meteo.com/v1/forecast?latitude=53.9171&longitude=-122.7497&current_weather=true"
@@ -115,7 +156,8 @@ def stats():
         "ram": ram,
         "storage": free_gb,
         "mbps": mbps,
-        "speed_rating": speed_rating
+        "speed_rating": speed_rating,
+        "casaos": casaos_data  # Feed the scraped CasaOS data to the frontend
     })
 
 @app.route('/status')
@@ -154,4 +196,6 @@ def get_screenshot():
         return "Internal Server Error", 500
 
 if __name__ == '__main__':
+    # Fire up the scraper thread right before the server boots!
+    threading.Thread(target=scrape_casaos_bg, daemon=True).start()
     app.run(host='0.0.0.0', port=6060, debug=False)
