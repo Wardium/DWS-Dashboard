@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request, send_file
 import requests
+import json
 from urllib.parse import urlparse
 import os
 import random
@@ -48,13 +49,60 @@ APPLETS = [
 last_net = psutil.net_io_counters()
 last_time = time.time()
 
-# Global dict to store live DWOS data
+# Global dicts for background scrappers
 dwos_data = {
     "cpu": 0, "ram": 0, "temp": "--°C", "storage": "-- / --"
 }
 
+ai_thoughts = []
+
+def generate_ai_thoughts_bg():
+    """Runs infinitely to fetch random thoughts from OpenRouter AI."""
+    global ai_thoughts
+    OPENROUTER_API_KEY = "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"
+    
+    while True:
+        try:
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps({
+                    "model": "deepseek/deepseek-v4-flash:free",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "make a completely random thought it can be existential or not, it can be what ever you want, 10 words long max."
+                        }
+                    ]
+                }),
+                timeout=20
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                thought = data['choices'][0]['message']['content'].strip()
+                
+                # Remove quotes if the AI adds them
+                if thought.startswith('"') and thought.endswith('"'):
+                    thought = thought[1:-1]
+                    
+                if thought:
+                    ai_thoughts.insert(0, thought)
+                    if len(ai_thoughts) > 5:
+                        ai_thoughts = ai_thoughts[:5]
+            else:
+                print(f"OpenRouter Error: {response.status_code} - {response.text}")
+                
+        except Exception as e:
+            print(f"AI Generator Error: {e}")
+            
+        time.sleep(60) # Generate a new thought every 1 minute
+
+
 def scrape_dwos_bg():
-    """Persistent browser session to scrape DWOS live data continuously."""
     global dwos_data
     while True:
         try:
@@ -67,7 +115,6 @@ def scrape_dwos_bg():
                 page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="load", timeout=60000)
                 page.wait_for_timeout(3000)
                 
-                # LOGIN CHECK
                 if page.locator("input[type='password']").count() > 0:
                     print("DWOS Login required. Submitting credentials...")
                     user_input = page.locator("input[type='text']").first
@@ -76,24 +123,20 @@ def scrape_dwos_bg():
                     
                     page.locator("input[type='password']").first.fill("weqr1234")
                     page.locator("input[type='password']").first.press("Enter")
-                    page.wait_for_timeout(5000) # Wait for animation/redirect
+                    page.wait_for_timeout(5000)
                 
-                # Wait for main dashboard to be fully ready
                 page.wait_for_selector(".overlay .per", state="attached", timeout=20000)
                 print("DWOS Dashboard loaded successfully! Starting live polling...")
                 
-                # Stay on the page and poll the DOM every 5 seconds! (Much faster than reloading)
                 while True:
                     cpu = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
                     ram = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
                     
-                    # Robust Regex fallback for Temp
                     temp = page.evaluate("""() => {
                         let match = document.body.innerText.match(/(\\d+)°C/);
                         return match ? match[1] + '°C' : '--°C';
                     }""")
                     
-                    # Robust Regex fallback for Storage
                     storage = page.evaluate("""() => {
                         let text = document.body.innerText;
                         let used = text.match(/Used:\\s*([\\d\\.]+\\s*[A-Z]+)/i);
@@ -109,7 +152,7 @@ def scrape_dwos_bg():
                     dwos_data["temp"] = temp
                     dwos_data["storage"] = storage
                     
-                    time.sleep(5) # Poll dynamically while connected
+                    time.sleep(5)
                     
         except Exception as e:
             print(f"DWOS Scraper Connection lost/Error: {e}. Reconnecting in 10s...")
@@ -136,15 +179,13 @@ def favicon():
 
 @app.route('/')
 def index():
-    # Pass clean URL string directly to frontend to avoid Jinja path issues
     bgs = [f for f in os.listdir(BACKGROUNDS_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
     bg_url = f"/static/backgrounds/{random.choice(bgs)}" if bgs else ""
-    
     return render_template('index.html', default_sites=DEFAULT_SITES, applets=APPLETS, bg_url=bg_url)
 
 @app.route('/api/stats')
 def stats():
-    global last_net, last_time, dwos_data
+    global last_net, last_time, dwos_data, ai_thoughts
     
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
@@ -178,7 +219,8 @@ def stats():
         "storage": free_gb,
         "mbps": mbps,
         "speed_rating": speed_rating,
-        "dwos": dwos_data
+        "dwos": dwos_data,
+        "ai_thoughts": ai_thoughts
     })
 
 @app.route('/status')
@@ -215,4 +257,5 @@ def get_screenshot():
 
 if __name__ == '__main__':
     threading.Thread(target=scrape_dwos_bg, daemon=True).start()
+    threading.Thread(target=generate_ai_thoughts_bg, daemon=True).start()
     app.run(host='0.0.0.0', port=6060, debug=False)
