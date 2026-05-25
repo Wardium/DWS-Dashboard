@@ -2,11 +2,12 @@
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>DWS Cloud</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ range(1000, 9999)|random }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/fast-average-color/dist/index.min.js"></script>
 </head>
 <body>
     {% if bg_url %}
@@ -143,5 +144,46 @@
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}?v={{ range(1000, 9999)|random }}"></script>
+
+    <script>
+  // Initialize the library
+  const fac = new FastAverageColor();
+  
+  // Select your background image element
+  // Make sure this matches the class or ID of your actual image
+  const img = document.querySelector('.my-background-image'); 
+
+  // Make sure the image has completely loaded before extracting the color
+  img.addEventListener('load', () => {
+      fac.getColorAsync(img)
+        .then(color => {
+            console.log('Average color is:', color.rgba);
+
+            // 1. Set the HTML and Body background
+            document.documentElement.style.backgroundColor = color.rgba;
+            document.body.style.backgroundColor = color.rgba;
+
+            // 2. Update or create the theme-color meta tag
+            let metaTheme = document.querySelector('meta[name="theme-color"]');
+            if (!metaTheme) {
+                // Create the tag if it doesn't exist
+                metaTheme = document.createElement('meta');
+                metaTheme.name = 'theme-color';
+                document.head.appendChild(metaTheme);
+            }
+            // Apply the hex color to the meta tag
+            metaTheme.content = color.hex; 
+        })
+        .catch(error => {
+            console.error('Error extracting color:', error);
+        });
+  });
+
+  // If the image is already loaded (e.g., from cache), trigger it manually
+  if (img.complete) {
+      img.dispatchEvent(new Event('load'));
+  }
+</script>
+    
 </body>
 </html>
