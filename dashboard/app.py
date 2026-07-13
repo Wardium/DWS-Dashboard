@@ -112,43 +112,57 @@ def scrape_dwos_bg():
                 page = context.new_page()
                 
                 print("Connecting to DWOS...")
-                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="load", timeout=60000)
-                page.wait_for_timeout(3000)
+                # FIX: wait_until="networkidle" ensures the SPA has finished rendering the login screen
+                page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="networkidle", timeout=60000)
                 
-                if page.locator("input[type='password']").count() > 0:
+                # FIX: Dynamically wait for the password field instead of a hardcoded 3-second sleep
+                try:
+                    page.wait_for_selector("input[type='password']", timeout=10000)
                     print("DWOS Login required. Submitting credentials...")
+                    
                     user_input = page.locator("input[type='text']").first
                     if user_input.count() > 0:
                         user_input.fill("dylan")
-                    
+                    else:
+                        # Fallback just in case the input is name='username'
+                        page.locator("input[name='username']").first.fill("dylan")
+                        
                     page.locator("input[type='password']").first.fill("weqr1234")
                     page.locator("input[type='password']").first.press("Enter")
                     page.wait_for_timeout(5000)
+                except:
+                    # Timeout means the password field didn't appear (might already be logged in)
+                    pass
                 
                 page.wait_for_selector(".overlay .per", state="attached", timeout=20000)
                 print("DWOS Dashboard loaded successfully! Starting live polling...")
                 
                 while True:
-                    cpu = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
-                    ram = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
+                    cpu_raw = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
+                    ram_raw = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
+                    
+                    # FIX: Remove '%' and empty spaces so .isdigit() returns True
+                    cpu_clean = cpu_raw.replace('%', '').strip()
+                    ram_clean = ram_raw.replace('%', '').strip()
                     
                     temp = page.evaluate("""() => {
-                        let match = document.body.innerText.match(/(\\d+)°C/);
+                        // FIX: Added \\s* to allow for a potential space before the °C symbol
+                        let match = document.body.innerText.match(/(\\d+)\\s*°C/);
                         return match ? match[1] + '°C' : '--°C';
                     }""")
                     
                     storage = page.evaluate("""() => {
                         let text = document.body.innerText;
-                        let used = text.match(/Used:\\s*([\\d\\.]+\\s*[A-Z]+)/i);
-                        let total = text.match(/Total:\\s*([\\d\\.]+\\s*[A-Z]+)/i);
+                        let used = text.match(/Used:\\s*([\\d\\.]+\\s*[a-zA-Z]+)/i);
+                        let total = text.match(/Total:\\s*([\\d\\.]+\\s*[a-zA-Z]+)/i);
                         if (used && total) {
                             return used[1] + ' / ' + total[1];
                         }
-                        return 'Unknown';
+                        return '-- / --';
                     }""")
                     
-                    dwos_data["cpu"] = int(cpu) if cpu.isdigit() else 0
-                    dwos_data["ram"] = int(ram) if ram.isdigit() else 0
+                    dwos_data["cpu"] = int(cpu_clean) if cpu_clean.isdigit() else 0
+                    dwos_data["ram"] = int(ram_clean) if ram_clean.isdigit() else 0
                     dwos_data["temp"] = temp
                     dwos_data["storage"] = storage
                     
