@@ -101,7 +101,6 @@ def generate_ai_thoughts_bg():
             
         time.sleep(60) # Generate a new thought every 1 minute
 
-
 def scrape_dwos_bg():
     global dwos_data
     while True:
@@ -111,55 +110,62 @@ def scrape_dwos_bg():
                 context = browser.new_context()
                 page = context.new_page()
                 
-                print("Connecting to DWOS...")
-                # FIX: wait_until="networkidle" ensures the SPA has finished rendering the login screen
+                print("[DWOS] Connecting to DWOS...")
                 page.goto("https://settings-rfdtq2xvdwq.teamexist.com/#/", wait_until="networkidle", timeout=60000)
                 
-                # FIX: Dynamically wait for the password field instead of a hardcoded 3-second sleep
+                # Take a screenshot of the initial load to see what the bot sees
+                page.screenshot(path=os.path.join(STATIC_DIR, "debug_dwos_load.png"))
+                print("[DWOS] Saved debug_dwos_load.png - check this image to see what the bot sees!")
+                
                 try:
                     page.wait_for_selector("input[type='password']", timeout=10000)
-                    print("DWOS Login required. Submitting credentials...")
+                    print("[DWOS] Login required. Submitting credentials...")
                     
                     user_input = page.locator("input[type='text']").first
                     if user_input.count() > 0:
                         user_input.fill("dylan")
                     else:
-                        # Fallback just in case the input is name='username'
                         page.locator("input[name='username']").first.fill("dylan")
                         
                     page.locator("input[type='password']").first.fill("weqr1234")
                     page.locator("input[type='password']").first.press("Enter")
                     page.wait_for_timeout(5000)
-                except:
-                    # Timeout means the password field didn't appear (might already be logged in)
-                    pass
+                except Exception as login_err:
+                    print(f"[DWOS] Login step skipped or failed. (This is normal if already logged in). Details: {login_err}")
                 
-                page.wait_for_selector(".overlay .per", state="attached", timeout=20000)
-                print("DWOS Dashboard loaded successfully! Starting live polling...")
-                
+                print("[DWOS] Waiting for dashboard elements (.overlay .per)...")
+                try:
+                    page.wait_for_selector(".overlay .per", state="attached", timeout=20000)
+                    print("[DWOS] Dashboard loaded successfully! Starting live polling...")
+                except Exception as wait_err:
+                    print(f"[DWOS] FAILED to find dashboard elements! Taking screenshot...")
+                    page.screenshot(path=os.path.join(STATIC_DIR, "debug_dwos_failed_dashboard.png"))
+                    raise Exception("Could not find .overlay .per on page.")
+
                 while True:
                     cpu_raw = page.evaluate("() => document.querySelectorAll('.overlay .per')[0]?.innerText || '0'")
                     ram_raw = page.evaluate("() => document.querySelectorAll('.overlay .per')[1]?.innerText || '0'")
                     
-                    # FIX: Remove '%' and empty spaces so .isdigit() returns True
                     cpu_clean = cpu_raw.replace('%', '').strip()
                     ram_clean = ram_raw.replace('%', '').strip()
                     
                     temp = page.evaluate("""() => {
-                        // FIX: Added \\s* to allow for a potential space before the °C symbol
-                        let match = document.body.innerText.match(/(\\d+)\\s*°C/);
+                        let match = document.body.innerText.match(/(\d+)\s*°C/);
                         return match ? match[1] + '°C' : '--°C';
                     }""")
                     
                     storage = page.evaluate("""() => {
                         let text = document.body.innerText;
-                        let used = text.match(/Used:\\s*([\\d\\.]+\\s*[a-zA-Z]+)/i);
-                        let total = text.match(/Total:\\s*([\\d\\.]+\\s*[a-zA-Z]+)/i);
+                        let used = text.match(/Used:\s*([\d\.]+\s*[a-zA-Z]+)/i);
+                        let total = text.match(/Total:\s*([\d\.]+\s*[a-zA-Z]+)/i);
                         if (used && total) {
                             return used[1] + ' / ' + total[1];
                         }
                         return '-- / --';
                     }""")
+                    
+                    # Log the exact raw data we are scraping to the console
+                    print(f"[DWOS DATA] CPU: {cpu_clean} | RAM: {ram_clean} | Temp: {temp} | Storage: {storage}")
                     
                     dwos_data["cpu"] = int(cpu_clean) if cpu_clean.isdigit() else 0
                     dwos_data["ram"] = int(ram_clean) if ram_clean.isdigit() else 0
@@ -169,7 +175,7 @@ def scrape_dwos_bg():
                     time.sleep(5)
                     
         except Exception as e:
-            print(f"DWOS Scraper Connection lost/Error: {e}. Reconnecting in 10s...")
+            print(f"[DWOS ERROR] Connection lost/Error: {e}. Reconnecting in 10s...")
             time.sleep(10)
 
 def capture_screenshot_bg(url, filepath):
