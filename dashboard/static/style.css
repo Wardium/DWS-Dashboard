@@ -122,3 +122,50 @@ span { font-family: Georgia, serif; }
 .warp-active { animation: enterWarp 0.6s cubic-bezier(0.5, 0, 0.2, 1) forwards; pointer-events: none; }
 
 #uptimeChart { border-radius: 24px; }
+
+.music-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    /* Assuming you have a .glass-panel class already, otherwise add backdrop-filter: blur(10px); */
+}
+
+.horizontal-bar {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.music-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.animated-btn {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    color: white;
+}
+
+.animated-btn:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#btn-sfx {
+    margin-top: 5px; /* Tiny bit more space */
+}
+
+.sfx-off {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
