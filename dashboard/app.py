@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request, send_file
 import requests
 import json
+import queue
 from urllib.parse import urlparse
 import os
 import random
@@ -53,6 +54,24 @@ last_time = time.time()
 dwos_data = {
     "cpu": 0, "ram": 0, "temp": "--°C", "storage": "-- / --"
 }
+
+screenshot_queue = queue.Queue()
+queued_urls = set() # Keeps track of URLs already waiting in line
+
+def screenshot_worker():
+    """Runs continuously in the background, processing one screenshot at a time."""
+    while True:
+        url, filepath = screenshot_queue.get()
+        print(f"[SCREENSHOT] Processing {url}...")
+        
+        capture_screenshot_bg(url, filepath)
+        
+        # Remove from tracking set and mark task done
+        queued_urls.remove(url)
+        screenshot_queue.task_done()
+        
+        # Let the CPU breathe before launching the next browser
+        time.sleep(2)
 
 def scrape_dwos_bg():
     global dwos_data
@@ -125,7 +144,8 @@ def scrape_dwos_bg():
                     dwos_data["temp"] = temp
                     dwos_data["storage"] = storage
                     
-                    time.sleep(5)
+                    # Update DWOS data once per minute
+                    time.sleep(60)
                     
         except Exception as e:
             print(f"[DWOS ERROR] Connection lost/Error: {e}. Reconnecting in 10s...")
@@ -226,11 +246,25 @@ def get_screenshot():
         url = request.args.get('url')
         if not url:
             return "No URL provided", 400
+            
         domain = urlparse(url).netloc
         safe_name = domain.replace(".", "_") + ".png"
         filepath = os.path.join(SCREENSHOTS_DIR, safe_name)
-        threading.Thread(target=capture_screenshot_bg, args=(url, filepath)).start()
+        
+        # 1. Check if the file exists and how old it is
+        needs_update = True
+        if os.path.exists(filepath):
+            file_age = time.time() - os.path.getmtime(filepath)
+            if file_age < 86400:  # 24 hours in seconds
+                needs_update = False
+                
+        # 2. If it needs an update and isn't already queued, add it
+        if needs_update and url not in queued_urls:
+            queued_urls.add(url)
+            screenshot_queue.put((url, filepath))
+            print(f"[SCREENSHOT] Added {url} to queue. Queue size: {screenshot_queue.qsize()}")
 
+        # 3. Serve the file if it exists, otherwise serve the fallback logo
         if os.path.exists(filepath):
             return send_file(filepath, mimetype='image/png')
         else:
@@ -238,7 +272,9 @@ def get_screenshot():
             if os.path.exists(fallback):
                 return send_file(fallback, mimetype='image/png')
             return "", 404
-    except Exception:
+            
+    except Exception as e:
+        print(f"Screenshot endpoint error: {e}")
         return "Internal Server Error", 500
 
 if __name__ == '__main__':
