@@ -71,10 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const triggerWarp = (e, url) => {
         e.preventDefault();
-        
-        // ADD THIS LINE:
-        if (sfxEnabled) sfxAudio.cloneNode(true).play().catch(()=>{});
-        
         mainUI.classList.add('warp-active');
         setTimeout(() => {
             window.open(url, '_blank'); 
