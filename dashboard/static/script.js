@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error(err));
     });
 
-    // ==========================================
+// ==========================================
     // 4. Dynamic Music Player & SFX System
     // ==========================================
     const albumBaseURL = "https://teamexist.com/expansions/DWSMusic/albums/MayhemsWorld/";
@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let songList = [];
     let currentSongIndex = 0;
+    let gracePeriodEnded = false; // Tracks if the initial load sequence is done
 
     // Load persisted user choices
     let isMusicEnabled = localStorage.getItem('dws_music_playing') === 'true';
@@ -114,38 +115,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const fadeAudio = (audioEl, targetVol, onComplete) => {
         if (!audioEl) return;
         
-        // Clear any existing fades on this specific audio element
         if (audioEl.fadeInterval) clearInterval(audioEl.fadeInterval);
         
-        const steps = 20; // How smooth the fade is
+        const steps = 20; 
         const intervalTime = FADE_DURATION / steps;
         const stepVol = (targetVol - audioEl.volume) / steps;
         
-        // If fading up from 0, make sure it's actually playing
-        if (targetVol > 0 && audioEl.paused) {
-            audioEl.play().catch(e => console.error("🚨 Playback blocked:", e));
-        }
-
-        audioEl.fadeInterval = setInterval(() => {
-            let nextVol = audioEl.volume + stepVol;
-            
-            // Safety bounds to prevent errors
-            if (nextVol > 1) nextVol = 1;
-            if (nextVol < 0) nextVol = 0;
-
-            // Check if we hit or passed our target volume
-            if ((stepVol >= 0 && nextVol >= targetVol) || (stepVol <= 0 && nextVol <= targetVol)) {
-                audioEl.volume = targetVol;
-                clearInterval(audioEl.fadeInterval);
+        const startFading = () => {
+            audioEl.fadeInterval = setInterval(() => {
+                let nextVol = audioEl.volume + stepVol;
                 
-                if (targetVol === 0) {
-                    audioEl.pause();
+                if (nextVol > 1) nextVol = 1;
+                if (nextVol < 0) nextVol = 0;
+
+                if ((stepVol >= 0 && nextVol >= targetVol) || (stepVol <= 0 && nextVol <= targetVol)) {
+                    audioEl.volume = targetVol;
+                    clearInterval(audioEl.fadeInterval);
+                    
+                    if (targetVol === 0) audioEl.pause();
+                    if (onComplete) onComplete();
+                } else {
+                    audioEl.volume = nextVol;
                 }
-                if (onComplete) onComplete();
-            } else {
-                audioEl.volume = nextVol;
-            }
-        }, intervalTime);
+            }, intervalTime);
+        };
+
+        // If fading up from 0, play FIRST, then fade
+        if (targetVol > 0 && audioEl.paused) {
+            audioEl.play().then(startFading).catch(e => {
+                console.warn("🚨 Browser blocked autoplay. Waiting for user interaction...");
+            });
+        } else {
+            startFading();
+        }
     };
 
     const updateSfxUI = () => {
@@ -171,16 +173,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const songFilename = songList[currentSongIndex];
         const trackUrl = albumBaseURL + songFilename.split(' ').join('%20');
         
-        console.log("🎵 Loading track:", trackUrl);
-        
         if (songTitleEl) {
             songTitleEl.innerText = formatSongTitle(songFilename);
         }
 
-        // Store the old audio player to fade it out
         const oldAudio = currentAudio;
-        
-        // Generate a fresh audio element for the new song
         currentAudio = new Audio(trackUrl);
         currentAudio.volume = (crossfade && isMusicEnabled) ? 0 : (isMusicEnabled ? MAX_VOLUME : 0);
         
@@ -189,22 +186,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (songTitleEl) songTitleEl.innerText = "Error Loading Track";
         };
 
-        // When this song naturally ends, crossfade to the next one
         currentAudio.addEventListener('ended', () => {
             loadTrack(currentSongIndex + 1, true);
         });
 
         if (isMusicEnabled) {
             if (crossfade) {
-                // CROSSFADE: Fade out the old, fade in the new
                 fadeAudio(oldAudio, 0, () => {
-                    oldAudio.onerror = null; // Prevent false errors when clearing
+                    oldAudio.onerror = null; 
                     oldAudio.removeAttribute('src'); 
-                    oldAudio.load(); // Properly flush from memory
+                    oldAudio.load(); 
                 });
                 fadeAudio(currentAudio, MAX_VOLUME);
             } else {
-                // Hard swap (for initial load)
                 if (oldAudio) {
                     oldAudio.onerror = null;
                     oldAudio.pause();
@@ -212,10 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     oldAudio.load();
                 }
                 currentAudio.volume = MAX_VOLUME;
-                currentAudio.play().catch(e => console.error("Playback failed:", e));
+                currentAudio.play().catch(e => console.warn("Playback blocked waiting for interaction."));
             }
         } else {
-            // Keep new track paused if music is muted
             if (oldAudio) {
                 oldAudio.onerror = null;
                 oldAudio.pause();
@@ -226,12 +219,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const togglePlayback = () => {
+        gracePeriodEnded = true; // User interacted
         isMusicEnabled = !isMusicEnabled;
         localStorage.setItem('dws_music_playing', isMusicEnabled);
         
         if (playBtn) playBtn.innerText = isMusicEnabled ? "⏸" : "▶";
 
-        // Fade in or Fade out
         if (isMusicEnabled) {
             fadeAudio(currentAudio, MAX_VOLUME);
         } else {
@@ -240,15 +233,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const forcePlayTrack = () => {
+        gracePeriodEnded = true; // User interacted
         isMusicEnabled = true;
         localStorage.setItem('dws_music_playing', 'true');
         if (playBtn) playBtn.innerText = "⏸";
-        // The crossfade inside loadTrack() will handle the fade-in
     };
 
     // Auto-discover songs dynamically using the GitHub API
     const initMusicEngine = async () => {
-        // REPLACE 'YourRepoName' with your actual github repository!
         const githubApiUrl = "https://api.github.com/repos/Wardium/Dylan-Ward-Studios-Website/contents/expansions/DWSMusic/albums/MayhemsWorld";
 
         try {
@@ -262,17 +254,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(file => file.name);
 
             if (songList.length > 0) {
-                console.log("🎵 Found tracks:", songList);
                 currentSongIndex = Math.floor(Math.random() * songList.length);
-                
-                // Initial load (no crossfade)
                 loadTrack(currentSongIndex, false);
 
-                // 3.5s Grace period before fading the music in
+                // 3.5s Grace period
                 setTimeout(() => {
-                    if (isMusicEnabled) {
-                        currentAudio.volume = 0; 
-                        fadeAudio(currentAudio, MAX_VOLUME);
+                    if (!gracePeriodEnded) {
+                        gracePeriodEnded = true;
+                        if (isMusicEnabled) {
+                            currentAudio.volume = 0; 
+                            fadeAudio(currentAudio, MAX_VOLUME);
+                        }
                     }
                 }, 3500);
             } else {
@@ -293,14 +285,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
             forcePlayTrack();
-            loadTrack(currentSongIndex + 1, true); // True = Crossfade
+            loadTrack(currentSongIndex + 1, true); 
         });
     }
 
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
             forcePlayTrack();
-            loadTrack(currentSongIndex - 1, true); // True = Crossfade
+            loadTrack(currentSongIndex - 1, true); 
         });
     }
 
@@ -313,10 +305,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Global Click Handler for Sound Effects
+    // Global Click Handler (SFX + Audio Unlock)
     document.addEventListener('click', (e) => {
+        // 1. Audio Unlock: If music should be playing but was blocked by browser
+        if (gracePeriodEnded && isMusicEnabled && currentAudio.paused) {
+            currentAudio.volume = 0;
+            fadeAudio(currentAudio, MAX_VOLUME);
+        }
+
+        // 2. SFX Handler
         if (!isSfxEnabled) return;
-        if (e.target.closest('.music-widget')) return; // Ignore clicks inside the music widget
+        if (e.target.closest('.music-widget')) return; // Ignore music widget clicks
 
         sfxAudio.currentTime = 0;
         sfxAudio.play().catch(() => {});
