@@ -68,14 +68,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 3. Warp effect -> NEW TAB
     // ==========================================
+    
     const triggerWarp = (e, url) => {
         e.preventDefault();
+        
+        // ADD THIS LINE:
+        if (sfxEnabled) sfxAudio.cloneNode(true).play().catch(()=>{});
+        
         mainUI.classList.add('warp-active');
         setTimeout(() => {
             window.open(url, '_blank'); 
             mainUI.classList.remove('warp-active'); 
         }, 400);
     };
+
+    document.querySelectorAll('.site-link').forEach(link => {
+        const url = link.getAttribute('href');
+        if (url) {
+            link.onclick = (e) => triggerWarp(e, url);
+        }
+    });
 
     // Settings button logic
     document.getElementById('settings-btn').addEventListener('click', (e) => {
@@ -316,12 +328,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Global Click Handler (SFX + Audio Unlock)
-    document.addEventListener('click', (e) => {
-        // 1. Audio Unlock: If music should be playing but was blocked by browser
-        if (gracePeriodEnded && isMusicEnabled && currentAudio.paused) {
-            currentAudio.volume = 0;
-            fadeAudio(currentAudio, MAX_VOLUME);
-        }
+    document.addEventListener('click', () => {
+    if (!sfxEnabled) return; // Use your exact variable name here (sfxEnabled or isSfxEnabled)
+    
+    // Clone the audio so clicks don't cut each other off
+    const clickClone = sfxAudio.cloneNode(true);
+    clickClone.volume = 0.6;
+    clickClone.play().catch(() => {});
+    });
 
         // 2. SFX Handler
         if (!isSfxEnabled) return;
