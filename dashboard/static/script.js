@@ -95,7 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const sfxBtn = document.getElementById('btn-sfx');
 
     const audioPlayer = new Audio();
-    // Optional SFX source file:
+    audioPlayer.volume = 1.0; // Ensure it's not muted
+    
+    // Optional SFX source file
     const sfxAudio = new Audio("/static/audio/click.mp3");
 
     let songList = [];
@@ -104,6 +106,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load persisted user choices
     let isMusicEnabled = localStorage.getItem('dws_music_playing') === 'true';
     let isSfxEnabled = localStorage.getItem('dws_sfx_enabled') === 'true';
+
+    // Debugging: Watch for audio loading errors
+    audioPlayer.onerror = (e) => {
+        console.error("🚨 Audio Error: Browser could not load the track. Check if this URL is correct:", audioPlayer.src);
+        if (songTitleEl) songTitleEl.innerText = "Error Loading Track";
+    };
 
     const updateSfxUI = () => {
         if (!sfxBtn) return;
@@ -124,7 +132,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (songList.length === 0) return;
         currentSongIndex = (index + songList.length) % songList.length;
         const songFilename = songList[currentSongIndex];
-        audioPlayer.src = albumBaseURL + encodeURIComponent(songFilename);
+        
+        // Encode the URL safely (fixes spaces turning into broken links)
+        const trackUrl = albumBaseURL + songFilename.split(' ').join('%20');
+        console.log("🎵 Attempting to load track:", trackUrl);
+        
+        audioPlayer.src = trackUrl;
+        audioPlayer.load(); // Force the browser to fetch the new source
+        
         if (songTitleEl) {
             songTitleEl.innerText = formatSongTitle(songFilename);
         }
@@ -133,50 +148,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePlayback = () => {
         isMusicEnabled = !isMusicEnabled;
         localStorage.setItem('dws_music_playing', isMusicEnabled);
-        if (playBtn) playBtn.innerText = isMusicEnabled ? "⏸" : "▶️";
-
+        
         if (isMusicEnabled) {
-            audioPlayer.play().catch(err => console.log("Audio play deferred:", err));
+            if (playBtn) playBtn.innerText = "⏸";
+            audioPlayer.play().catch(err => {
+                console.error("🚨 Playback blocked by browser:", err);
+            });
         } else {
+            if (playBtn) playBtn.innerText = "▶️";
             audioPlayer.pause();
         }
     };
 
+    const forcePlayTrack = () => {
+        isMusicEnabled = true;
+        localStorage.setItem('dws_music_playing', 'true');
+        if (playBtn) playBtn.innerText = "⏸";
+        audioPlayer.play().catch(err => console.error("🚨 Force play failed:", err));
+    };
+
     // Auto-discover songs dynamically using the GitHub API
     const initMusicEngine = async () => {
-        // REPLACE 'YourRepoName' with the actual name of your github repository
-        const githubApiUrl = "https://api.github.com/repos/Wardium/DWS-Dashboard/contents/expansions/DWSMusic/albums/MayhemsWorld";
+        // NOTE: Ensure 'YourRepoName' is replaced with your actual GitHub repository name!
+        const githubApiUrl = "https://api.github.com/repos/Wardium/YourRepoName/contents/expansions/DWSMusic/albums/MayhemsWorld";
 
         try {
             const res = await fetch(githubApiUrl);
+            if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
             
-            if (!res.ok) {
-                throw new Error(`GitHub API returned ${res.status}`);
-            }
-
             const data = await res.json();
 
-            // Filter the GitHub API response for .mp3 files and extract their names
+            // Filter for .mp3 files
             songList = data
                 .filter(file => file.name.toLowerCase().endsWith('.mp3'))
                 .map(file => file.name);
 
             if (songList.length > 0) {
-                // Pick a random starting song on every reload
+                console.log("🎵 Found tracks:", songList);
                 currentSongIndex = Math.floor(Math.random() * songList.length);
                 loadTrack(currentSongIndex);
 
-                // 3.5 second grace period before starting playback
+                // Grace period before playing
                 setTimeout(() => {
                     if (isMusicEnabled) {
-                        audioPlayer.play().catch(e => console.log("Autoplay waiting for interaction:", e));
+                        audioPlayer.play().catch(e => console.log("Autoplay waiting for user click:", e));
                     }
                 }, 3500);
             } else {
                 if (songTitleEl) songTitleEl.innerText = "No Tracks Found";
             }
         } catch (err) {
-            console.error("Error auto-discovering tracks via GitHub API:", err);
+            console.error("🚨 Error auto-discovering tracks:", err);
             if (songTitleEl) songTitleEl.innerText = "Mayhem's World";
         }
     };
@@ -190,14 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
             loadTrack(currentSongIndex + 1);
-            if (isMusicEnabled) audioPlayer.play();
+            forcePlayTrack(); // Force it to play when you skip
         });
     }
 
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
             loadTrack(currentSongIndex - 1);
-            if (isMusicEnabled) audioPlayer.play();
+            forcePlayTrack(); // Force it to play when you skip
         });
     }
 
@@ -219,13 +241,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global Click Handler for Sound Effects
     document.addEventListener('click', (e) => {
         if (!isSfxEnabled) return;
-        // Skip audio control buttons to avoid double sounds
-        if (e.target.closest('.music-widget')) return;
+        if (e.target.closest('.music-widget')) return; // Ignore clicks inside the music widget itself
 
         sfxAudio.currentTime = 0;
-        sfxAudio.play().catch(() => {
-            // Fails silently if audio file is not present
-        });
+        sfxAudio.play().catch(() => {});
     });
 
     initMusicEngine();
