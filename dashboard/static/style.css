@@ -141,6 +141,7 @@ span { font-family: Georgia, serif; }
     padding: 20px;
     border-radius: 22px;
     margin: -25px;
+    background: #00000000;
 }
 
 .horizontal-bar {
