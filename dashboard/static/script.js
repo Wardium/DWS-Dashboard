@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const introLogo = document.getElementById('intro-logo');
     const mainUI = document.getElementById('main-ui');
     const sidebarsWrapper = document.getElementById('sidebar-ui');
+    
+    // Initialize the startup sound
+    const startupAudio = new Audio("/static/audio/startup.mp3");
 
     setTimeout(() => {
         introLogo.classList.add('dropped');
@@ -38,6 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Trigger the main tab unroll
                 mainUI.classList.add('unrolled'); 
+                
+                // 👉 PLAY STARTUP SOUND HERE
+                if (isSfxEnabled) {
+                    startupAudio.play().catch(e => {
+                        console.log("Startup sound blocked by browser autoplay policy.");
+                    });
+                }
                 
                 // Slide sidebars in
                 setTimeout(() => { sidebarsWrapper.classList.add('revealed'); }, 300);
