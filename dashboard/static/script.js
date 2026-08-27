@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isMusicEnabled = !isMusicEnabled;
         localStorage.setItem('dws_music_playing', isMusicEnabled);
         
-        if (playBtn) playBtn.innerText = isMusicEnabled ? "⏸" : "▶️";
+        if (playBtn) playBtn.innerText = isMusicEnabled ? "⏸" : "▶";
 
         // Fade in or Fade out
         if (isMusicEnabled) {
