@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-discover songs dynamically using the GitHub API
     const initMusicEngine = async () => {
         // REPLACE 'YourRepoName' with your actual github repository!
-        const githubApiUrl = "https://api.github.com/repos/Wardium/YourRepoName/contents/expansions/DWSMusic/albums/MayhemsWorld";
+        const githubApiUrl = "https://api.github.com/repos/Wardium/Dylan-Ward-Studios-Website/contents/expansions/DWSMusic/albums/MayhemsWorld";
 
         try {
             const res = await fetch(githubApiUrl);
