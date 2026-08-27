@@ -142,29 +142,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Auto-discover songs dynamically from the album directory
+    // Auto-discover songs dynamically using the GitHub API
     const initMusicEngine = async () => {
+        // REPLACE 'YourRepoName' with the actual name of your github repository
+        const githubApiUrl = "https://api.github.com/repos/Wardium/DWS-Dashboard/contents/expansions/DWSMusic/albums/MayhemsWorld";
+
         try {
-            const res = await fetch(albumBaseURL);
-            const html = await res.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const links = Array.from(doc.querySelectorAll('a'));
+            const res = await fetch(githubApiUrl);
+            
+            if (!res.ok) {
+                throw new Error(`GitHub API returned ${res.status}`);
+            }
 
-            songList = links
-                .map(a => a.getAttribute('href'))
-                .filter(href => href && href.toLowerCase().endsWith('.mp3'))
-                .map(href => href.split('/').pop());
+            const data = await res.json();
 
-            // Deduplicate
-            songList = [...new Set(songList)];
+            // Filter the GitHub API response for .mp3 files and extract their names
+            songList = data
+                .filter(file => file.name.toLowerCase().endsWith('.mp3'))
+                .map(file => file.name);
 
             if (songList.length > 0) {
                 // Pick a random starting song on every reload
                 currentSongIndex = Math.floor(Math.random() * songList.length);
                 loadTrack(currentSongIndex);
 
-                // 3 to 4 second grace period before starting playback
+                // 3.5 second grace period before starting playback
                 setTimeout(() => {
                     if (isMusicEnabled) {
                         audioPlayer.play().catch(e => console.log("Autoplay waiting for interaction:", e));
@@ -174,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (songTitleEl) songTitleEl.innerText = "No Tracks Found";
             }
         } catch (err) {
-            console.error("Error auto-discovering tracks:", err);
+            console.error("Error auto-discovering tracks via GitHub API:", err);
             if (songTitleEl) songTitleEl.innerText = "Mayhem's World";
         }
     };
