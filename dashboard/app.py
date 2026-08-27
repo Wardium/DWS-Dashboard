@@ -102,12 +102,12 @@ def scrape_dwos_bg():
                     cpu_clean = cpu_raw.replace('%', '').strip()
                     ram_clean = ram_raw.replace('%', '').strip()
                     
-                    temp = page.evaluate("""() => {
+                    temp = page.evaluate(r"""() => {
                         let match = document.body.innerText.match(/(\d+)\s*°C/);
                         return match ? match[1] + '°C' : '--°C';
                     }""")
                     
-                    storage = page.evaluate("""() => {
+                    storage = page.evaluate(r"""() => {
                         let text = document.body.innerText;
                         let used = text.match(/Used:\s*([\d\.]+\s*[a-zA-Z]+)/i);
                         let total = text.match(/Total:\s*([\d\.]+\s*[a-zA-Z]+)/i);
