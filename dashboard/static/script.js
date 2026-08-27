@@ -321,21 +321,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Global Click Handler (SFX + Audio Unlock)
-    document.addEventListener('click', () => {
-    if (!sfxEnabled) return; // Use your exact variable name here (sfxEnabled or isSfxEnabled)
-    
-    // Clone the audio so clicks don't cut each other off
-    const clickClone = sfxAudio.cloneNode(true);
-    clickClone.volume = 0.6;
-    clickClone.play().catch(() => {});
-    });
+    document.addEventListener('click', (e) => {
+        // 1. Audio Unlock: If music should be playing but was blocked by browser
+        if (typeof gracePeriodEnded !== 'undefined' && gracePeriodEnded && typeof isMusicEnabled !== 'undefined' && isMusicEnabled && currentAudio.paused) {
+            currentAudio.volume = 0;
+            fadeAudio(currentAudio, MAX_VOLUME);
+        }
 
         // 2. SFX Handler
-        if (!isSfxEnabled) return;
-        if (e.target.closest('.music-widget')) return; // Ignore music widget clicks
-
-        sfxAudio.currentTime = 0;
-        sfxAudio.play().catch(() => {});
+        if (typeof isSfxEnabled !== 'undefined' && !isSfxEnabled) return;
+        
+        // Clone the audio so clicks don't cut each other off
+        const clickClone = sfxAudio.cloneNode(true);
+        clickClone.volume = 0.6;
+        clickClone.play().catch(() => {});
     });
 
     initMusicEngine();
