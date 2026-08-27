@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ==========================================
     // 1. Persistent Theme Handling
+    // ==========================================
     const htmlEl = document.documentElement;
     const themeBtn = document.getElementById('theme-toggle');
     const themeIconPath = themeBtn.querySelector('path');
@@ -19,7 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
         themeIconPath.setAttribute('d', newTheme === 'dark' ? sunPath : moonPath);
     });
 
+    // ==========================================
     // 2. Intro Sequence & FADE-IN FIX
+    // ==========================================
     const introContainer = document.getElementById('intro-container');
     const introLogo = document.getElementById('intro-logo');
     const mainUI = document.getElementById('main-ui');
@@ -39,11 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { sidebarsWrapper.classList.add('revealed'); }, 300);
                 setTimeout(() => introContainer.style.display = 'none', 800);
 
-                // --- THE FIX: Force the items to fade in AFTER the unroll completes ---
+                // Force items to fade in AFTER unroll completes
                 setTimeout(() => {
                     const items = document.querySelectorAll('.scroll-reveal');
                     items.forEach((el, index) => {
-                        // Cascading delay for a cool pop-in effect
                         setTimeout(() => el.classList.add('visible'), index * 75);
                     });
                 }, 1000); 
@@ -52,7 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1200);
     }, 100);
 
+    // ==========================================
     // 3. Warp effect -> NEW TAB
+    // ==========================================
     const triggerWarp = (e, url) => {
         e.preventDefault();
         mainUI.classList.add('warp-active');
@@ -79,7 +84,153 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error(err));
     });
 
-    // 4. Build Dynamic UI Charts
+    // ==========================================
+    // 4. Dynamic Music Player & SFX System
+    // ==========================================
+    const albumBaseURL = "https://teamexist.com/expansions/DWSMusic/albums/MayhemsWorld/";
+    const songTitleEl = document.getElementById('song-title');
+    const playBtn = document.getElementById('btn-play');
+    const prevBtn = document.getElementById('btn-prev');
+    const nextBtn = document.getElementById('btn-next');
+    const sfxBtn = document.getElementById('btn-sfx');
+
+    const audioPlayer = new Audio();
+    // Optional SFX source file:
+    const sfxAudio = new Audio("/static/audio/click.mp3");
+
+    let songList = [];
+    let currentSongIndex = 0;
+
+    // Load persisted user choices
+    let isMusicEnabled = localStorage.getItem('dws_music_playing') === 'true';
+    let isSfxEnabled = localStorage.getItem('dws_sfx_enabled') === 'true';
+
+    const updateSfxUI = () => {
+        if (!sfxBtn) return;
+        if (isSfxEnabled) {
+            sfxBtn.classList.remove('sfx-off');
+        } else {
+            sfxBtn.classList.add('sfx-off');
+        }
+    };
+
+    const formatSongTitle = (filename) => {
+        return decodeURIComponent(filename)
+            .replace(/\.mp3$/i, '')
+            .replace(/[-_]/g, ' ');
+    };
+
+    const loadTrack = (index) => {
+        if (songList.length === 0) return;
+        currentSongIndex = (index + songList.length) % songList.length;
+        const songFilename = songList[currentSongIndex];
+        audioPlayer.src = albumBaseURL + encodeURIComponent(songFilename);
+        if (songTitleEl) {
+            songTitleEl.innerText = formatSongTitle(songFilename);
+        }
+    };
+
+    const togglePlayback = () => {
+        isMusicEnabled = !isMusicEnabled;
+        localStorage.setItem('dws_music_playing', isMusicEnabled);
+        if (playBtn) playBtn.innerText = isMusicEnabled ? "⏸" : "▶️";
+
+        if (isMusicEnabled) {
+            audioPlayer.play().catch(err => console.log("Audio play deferred:", err));
+        } else {
+            audioPlayer.pause();
+        }
+    };
+
+    // Auto-discover songs dynamically from the album directory
+    const initMusicEngine = async () => {
+        try {
+            const res = await fetch(albumBaseURL);
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const links = Array.from(doc.querySelectorAll('a'));
+
+            songList = links
+                .map(a => a.getAttribute('href'))
+                .filter(href => href && href.toLowerCase().endsWith('.mp3'))
+                .map(href => href.split('/').pop());
+
+            // Deduplicate
+            songList = [...new Set(songList)];
+
+            if (songList.length > 0) {
+                // Pick a random starting song on every reload
+                currentSongIndex = Math.floor(Math.random() * songList.length);
+                loadTrack(currentSongIndex);
+
+                // 3 to 4 second grace period before starting playback
+                setTimeout(() => {
+                    if (isMusicEnabled) {
+                        audioPlayer.play().catch(e => console.log("Autoplay waiting for interaction:", e));
+                    }
+                }, 3500);
+            } else {
+                if (songTitleEl) songTitleEl.innerText = "No Tracks Found";
+            }
+        } catch (err) {
+            console.error("Error auto-discovering tracks:", err);
+            if (songTitleEl) songTitleEl.innerText = "Mayhem's World";
+        }
+    };
+
+    // Attach Player Event Handlers
+    if (playBtn) {
+        playBtn.innerText = isMusicEnabled ? "⏸" : "▶️";
+        playBtn.addEventListener('click', togglePlayback);
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            loadTrack(currentSongIndex + 1);
+            if (isMusicEnabled) audioPlayer.play();
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            loadTrack(currentSongIndex - 1);
+            if (isMusicEnabled) audioPlayer.play();
+        });
+    }
+
+    // Loop through list automatically on song end
+    audioPlayer.addEventListener('ended', () => {
+        loadTrack(currentSongIndex + 1);
+        if (isMusicEnabled) audioPlayer.play();
+    });
+
+    if (sfxBtn) {
+        updateSfxUI();
+        sfxBtn.addEventListener('click', () => {
+            isSfxEnabled = !isSfxEnabled;
+            localStorage.setItem('dws_sfx_enabled', isSfxEnabled);
+            updateSfxUI();
+        });
+    }
+
+    // Global Click Handler for Sound Effects
+    document.addEventListener('click', (e) => {
+        if (!isSfxEnabled) return;
+        // Skip audio control buttons to avoid double sounds
+        if (e.target.closest('.music-widget')) return;
+
+        sfxAudio.currentTime = 0;
+        sfxAudio.play().catch(() => {
+            // Fails silently if audio file is not present
+        });
+    });
+
+    initMusicEngine();
+
+    // ==========================================
+    // 5. Build Dynamic UI Charts
+    // ==========================================
     Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
     
     const buildGradient = (canvasId, colorTop, colorBottom) => {
@@ -150,7 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 5. Polling Loop
+    // ==========================================
+    // 6. Polling Loop
+    // ==========================================
     const fetchStats = () => {
         fetch('/api/stats')
             .then(res => res.json())
@@ -178,12 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dwosCpuChart.update();
                 dwosRamChart.data.datasets[0].data = [data.dwos.ram, 100 - data.dwos.ram];
                 dwosRamChart.update();
-                
-                // AI Ramblings Layout Update
-                if (data.ai_thoughts && data.ai_thoughts.length > 0) {
-                    const aiContainer = document.getElementById('ai-thoughts-container');
-                    aiContainer.innerHTML = data.ai_thoughts.map(t => `<p class="ai-thought">"${t}"</p>`).join('');
-                }
             })
             .catch(err => console.error("Stats Error:", err));
     };
