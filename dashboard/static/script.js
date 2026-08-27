@@ -198,14 +198,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (crossfade) {
                 // CROSSFADE: Fade out the old, fade in the new
                 fadeAudio(oldAudio, 0, () => {
-                    oldAudio.src = ""; // Dump old song from memory when done fading
+                    oldAudio.onerror = null; // Prevent false errors when clearing
+                    oldAudio.removeAttribute('src'); 
+                    oldAudio.load(); // Properly flush from memory
                 });
                 fadeAudio(currentAudio, MAX_VOLUME);
             } else {
                 // Hard swap (for initial load)
                 if (oldAudio) {
+                    oldAudio.onerror = null;
                     oldAudio.pause();
-                    oldAudio.src = "";
+                    oldAudio.removeAttribute('src');
+                    oldAudio.load();
                 }
                 currentAudio.volume = MAX_VOLUME;
                 currentAudio.play().catch(e => console.error("Playback failed:", e));
@@ -213,8 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Keep new track paused if music is muted
             if (oldAudio) {
+                oldAudio.onerror = null;
                 oldAudio.pause();
-                oldAudio.src = "";
+                oldAudio.removeAttribute('src');
+                oldAudio.load();
             }
         }
     };
