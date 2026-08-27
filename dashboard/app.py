@@ -49,57 +49,10 @@ APPLETS = [
 last_net = psutil.net_io_counters()
 last_time = time.time()
 
-# Global dicts for background scrappers
+# Global dict for background scrappers
 dwos_data = {
     "cpu": 0, "ram": 0, "temp": "--°C", "storage": "-- / --"
 }
-
-ai_thoughts = []
-
-def generate_ai_thoughts_bg():
-    """Runs infinitely to fetch random thoughts from OpenRouter AI."""
-    global ai_thoughts
-    OPENROUTER_API_KEY = "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"
-    
-    while True:
-        try:
-            response = requests.post(
-                url="https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                data=json.dumps({
-                    "model": "openrouter/free",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": "make a completely random thought it can be existential or not, it can be what ever you want, 10 words long max."
-                        }
-                    ]
-                }),
-                timeout=20
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                thought = data['choices'][0]['message']['content'].strip()
-                
-                # Remove quotes if the AI adds them
-                if thought.startswith('"') and thought.endswith('"'):
-                    thought = thought[1:-1]
-                    
-                if thought:
-                    ai_thoughts.insert(0, thought)
-                    if len(ai_thoughts) > 5:
-                        ai_thoughts = ai_thoughts[:5]
-            else:
-                print(f"OpenRouter Error: {response.status_code} - {response.text}")
-                
-        except Exception as e:
-            print(f"AI Generator Error: {e}")
-            
-        time.sleep(60) # Generate a new thought every 1 minute
 
 def scrape_dwos_bg():
     global dwos_data
@@ -184,6 +137,20 @@ def capture_screenshot_bg(url, filepath):
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 1280, "height": 720})
             page.goto(url, wait_until="domcontentloaded", timeout=50000)
+            
+            # Check if redirected to the TeamExist auth firewall
+            if "auth.teamexist.com" in page.url:
+                try:
+                    print(f"Auth redirect detected for {url}. Bypassing firewall...")
+                    # Target the password field, fill it, and hit enter
+                    page.locator("input[type='password']").first.fill("weqr1234")
+                    page.locator("input[type='password']").first.press("Enter")
+                    
+                    # Wait for the authentication to complete and the destination site to load
+                    page.wait_for_timeout(4000) 
+                except Exception as auth_err:
+                    print(f"Failed to bypass auth for {url}: {auth_err}")
+            
             page.wait_for_timeout(5000) 
             page.screenshot(path=filepath)
             browser.close()
@@ -205,7 +172,7 @@ def index():
 
 @app.route('/api/stats')
 def stats():
-    global last_net, last_time, dwos_data, ai_thoughts
+    global last_net, last_time, dwos_data
     
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
@@ -239,8 +206,7 @@ def stats():
         "storage": free_gb,
         "mbps": mbps,
         "speed_rating": speed_rating,
-        "dwos": dwos_data,
-        "ai_thoughts": ai_thoughts
+        "dwos": dwos_data
     })
 
 @app.route('/status')
@@ -277,5 +243,4 @@ def get_screenshot():
 
 if __name__ == '__main__':
     threading.Thread(target=scrape_dwos_bg, daemon=True).start()
-    threading.Thread(target=generate_ai_thoughts_bg, daemon=True).start()
     app.run(host='0.0.0.0', port=6060, debug=False)
