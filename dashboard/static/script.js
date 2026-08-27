@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Attach Player Event Handlers
     if (playBtn) {
-        playBtn.innerText = isMusicEnabled ? "⏸" : "▶️";
+        playBtn.innerText = isMusicEnabled ? "⏸" : "▶";
         playBtn.addEventListener('click', togglePlayback);
     }
 
