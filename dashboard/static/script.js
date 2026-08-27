@@ -82,13 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
     };
 
-    document.querySelectorAll('.site-link').forEach(link => {
-        const url = link.getAttribute('href');
-        if (url) {
-            link.onclick = (e) => triggerWarp(e, url);
-        }
-    });
-
     // Settings button logic
     document.getElementById('settings-btn').addEventListener('click', (e) => {
         triggerWarp(e, 'https://settings-rfdtq2xvdwq.teamexist.com/#/');
